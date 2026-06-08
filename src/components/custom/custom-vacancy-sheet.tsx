@@ -62,10 +62,10 @@ export function CustomVacancySheet() {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold">
-            Письмо под свою вакансию
+            Письмо под любую вакансию
           </span>
           <span className="block text-xs text-muted-foreground">
-            Вставьте текст вакансии не из hh.ru — ИИ напишет сопроводительное
+            Вставьте текст любой вакансии — ИИ напишет сопроводительное
           </span>
         </span>
         <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -78,7 +78,7 @@ export function CustomVacancySheet() {
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />
-            Письмо под свою вакансию
+            Письмо под любую вакансию
           </SheetTitle>
           <SheetDescription>
             Вставьте описание любой вакансии — ИИ подготовит сопроводительное

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Flame, Heart, UserRound } from "lucide-react";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store/use-app-store";
 
@@ -24,8 +24,8 @@ export function BottomNav() {
     : { type: "spring" as const, stiffness: 420, damping: 34, mass: 0.7 };
   const labelTransition = reduce
     ? { duration: 0 }
-    : { type: "spring" as const, stiffness: 460, damping: 38 };
-  const iconTransition = { type: "spring" as const, stiffness: 440, damping: 15 };
+    : { duration: 0.24, ease: [0.22, 1, 0.36, 1] as const };
+  const iconTransition = { type: "spring" as const, stiffness: 440, damping: 24 };
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -61,7 +61,7 @@ export function BottomNav() {
               <motion.span
                 whileTap={reduce ? undefined : { scale: 0.86 }}
                 transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                className="relative z-10 flex items-center"
+                className="relative z-10 grid grid-flow-col items-center"
               >
                 <motion.span
                   animate={reduce ? undefined : { scale: active ? 1.1 : 1, y: active ? -1 : 0 }}
@@ -74,21 +74,19 @@ export function BottomNav() {
                   />
                 </motion.span>
 
-                {/* Label reveals by width when the tab becomes active */}
-                <AnimatePresence initial={false}>
-                  {active && (
-                    <motion.span
-                      key="label"
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: "auto", opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={labelTransition}
-                      className="overflow-hidden whitespace-nowrap"
-                    >
-                      <span className="pl-2">{tab.label}</span>
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {/* Grid-column reveal avoids animating text width to "auto". */}
+                <motion.span
+                  aria-hidden="true"
+                  animate={{
+                    gridTemplateColumns: active ? "1fr" : "0fr",
+                    opacity: active ? 1 : 0,
+                    paddingLeft: active ? 8 : 0,
+                  }}
+                  transition={labelTransition}
+                  className="grid min-w-0 overflow-hidden whitespace-nowrap"
+                >
+                  <span className="min-w-0 overflow-hidden">{tab.label}</span>
+                </motion.span>
               </motion.span>
 
               {/* Liked count badge */}

@@ -44,12 +44,9 @@ export default function LikedPage() {
         <BrandMark />
       </header>
 
-      <div className="space-y-4 px-4 py-5">
-        <div>
+      <div className="space-y-4 px-4 py-4">
+        <div className="pt-1">
           <h1 className="text-2xl font-bold tracking-tight">Мои отклики</h1>
-          <p className="text-sm text-muted-foreground">
-            Лайкнутые вакансии и письма под свои вакансии.
-          </p>
         </div>
 
         {hydrated && <CustomVacancySheet />}
