@@ -26,6 +26,37 @@ export function getOrCreateUserId(): string {
   return id;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+export async function getAuthUser(): Promise<AuthUser | null> {
+  try {
+    const res = await fetch("/api/auth/session", { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { user?: AuthUser | null };
+    return data.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function mergeAnonymousState(sourceUserId: string): Promise<void> {
+  if (!sourceUserId) return;
+  try {
+    await fetch("/api/db/merge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceUserId }),
+    });
+  } catch (e) {
+    console.warn("db-merge error", e);
+  }
+}
+
 export interface RemoteState {
   profile: ResumeProfile | null;
   filters: Filters | null;

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { loadState } from "@/lib/supabase/queries";
+import { resolveRequestUserId } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const userId = new URL(req.url).searchParams.get("userId");
+  const requestedUserId = new URL(req.url).searchParams.get("userId") ?? "";
+  const userId = await resolveRequestUserId(requestedUserId);
   if (!userId) {
     return NextResponse.json({ error: "userId обязателен" }, { status: 400 });
   }

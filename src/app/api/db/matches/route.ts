@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveMatches } from "@/lib/supabase/queries";
+import { resolveRequestUserId } from "@/lib/supabase/auth";
 import type { HHVacancyItem } from "@/lib/hh/types";
 import type { MatchResult } from "@/lib/types";
 
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
-  const userId = String(body.userId ?? "");
+  const userId = await resolveRequestUserId(String(body.userId ?? ""));
   const items = Array.isArray(body.items)
     ? (body.items as { vacancy: HHVacancyItem; match: MatchResult }[])
     : [];

@@ -1,6 +1,9 @@
 "use client";
+import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import type { AuthUser } from "@/lib/db-sync";
 
 function GoogleIcon() {
   return (
@@ -38,17 +41,116 @@ function YandexIcon() {
 }
 
 export function AuthButtons() {
-  const notify = (provider: string) =>
-    toast.info(`Вход через ${provider}`, {
-      description: "Настоящая авторизация появится в следующей версии.",
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { user?: AuthUser | null } | null) => {
+        if (active) setUser(data?.user ?? null);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    const params = new URLSearchParams(window.location.search);
+    const auth = params.get("auth");
+    if (auth === "success") {
+      toast.success("Вы вошли через Google");
+      window.history.replaceState(null, "", window.location.pathname);
+    } else if (auth === "error") {
+      toast.error("Не удалось войти через Google");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const signInWithGoogle = () => {
+    window.location.assign("/api/auth/google?next=/profile");
+  };
+
+  const signOut = async () => {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/sign-out", { method: "POST" });
+      setUser(null);
+      toast.success("Вы вышли из аккаунта");
+      window.location.reload();
+    } catch {
+      toast.error("Не удалось выйти из аккаунта");
+      setSigningOut(false);
+    }
+  };
+
+  const notifyYandex = () =>
+    toast.info("Вход через Яндекс пока не подключён", {
+      description: "Сейчас доступен вход через Google.",
     });
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Button
+          variant="outline"
+          className="h-11 justify-center gap-2 rounded-xl"
+          disabled
+        >
+          <GoogleIcon />
+          Проверяем аккаунт
+        </Button>
+        <Button
+          variant="outline"
+          className="h-11 justify-center gap-2 rounded-xl"
+          disabled
+        >
+          <YandexIcon />
+          Войти через Яндекс
+        </Button>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">
+            {user.name || user.email || "Google аккаунт"}
+          </p>
+          {user.email ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
+          ) : null}
+        </div>
+        <Button
+          variant="outline"
+          className="h-10 justify-center gap-2 rounded-xl sm:w-auto"
+          onClick={signOut}
+          disabled={signingOut}
+        >
+          <LogOut className="size-4" />
+          {signingOut ? "Выходим" : "Выйти"}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <Button
         variant="outline"
         className="h-11 justify-center gap-2 rounded-xl"
-        onClick={() => notify("Google")}
+        onClick={signInWithGoogle}
       >
         <GoogleIcon />
         Войти через Google
@@ -56,7 +158,7 @@ export function AuthButtons() {
       <Button
         variant="outline"
         className="h-11 justify-center gap-2 rounded-xl"
-        onClick={() => notify("Яндекс")}
+        onClick={notifyYandex}
       >
         <YandexIcon />
         Войти через Яндекс

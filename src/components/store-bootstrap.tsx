@@ -1,7 +1,12 @@
 "use client";
 import { useEffect } from "react";
 import { useAppStore } from "@/lib/store/use-app-store";
-import { getOrCreateUserId, pullState } from "@/lib/db-sync";
+import {
+  getAuthUser,
+  getOrCreateUserId,
+  mergeAnonymousState,
+  pullState,
+} from "@/lib/db-sync";
 
 /**
  * Loads the user's data from Supabase into the store on first mount. The only
@@ -14,11 +19,21 @@ export function StoreBootstrap() {
 
   useEffect(() => {
     let active = true;
-    const id = getOrCreateUserId();
-    setUserId(id);
-    pullState(id)
-      .then((state) => {
-        if (active && state) hydrateFromServer(state);
+    async function bootstrap() {
+      const anonymousId = getOrCreateUserId();
+      const user = await getAuthUser();
+      const id = user?.id ?? anonymousId;
+      if (user && user.id !== anonymousId) {
+        await mergeAnonymousState(anonymousId);
+      }
+      if (!active) return;
+      setUserId(id);
+      const state = await pullState(id);
+      if (active && state) hydrateFromServer(state);
+    }
+    bootstrap()
+      .catch((error) => {
+        console.warn("store-bootstrap error", error);
       })
       .finally(() => {
         if (active) setHydrated(true);

@@ -104,6 +104,104 @@ export async function saveFilters(
   if (error) throw new Error(error.message);
 }
 
+export async function mergeUsers(
+  sourceUserId: string,
+  targetUserId: string,
+): Promise<void> {
+  if (!sourceUserId || !targetUserId || sourceUserId === targetUserId) return;
+
+  const sb = getSupabase();
+  await ensureUser(sourceUserId);
+  await ensureUser(targetUserId);
+
+  const [sourceRes, targetRes] = await Promise.all([
+    sb.from("users").select("*").eq("id", sourceUserId).maybeSingle(),
+    sb.from("users").select("*").eq("id", targetUserId).maybeSingle(),
+  ]);
+  if (sourceRes.error) throw new Error(sourceRes.error.message);
+  if (targetRes.error) throw new Error(targetRes.error.message);
+
+  const source = sourceRes.data;
+  const target = targetRes.data;
+  const patch: Record<string, unknown> = {};
+  if (source && target) {
+    if (!target.resume_text && source.resume_text) {
+      patch.resume_text = source.resume_text;
+      patch.resume_title = source.resume_title;
+      patch.resume_skills = source.resume_skills ?? [];
+      patch.resume_seniority = source.resume_seniority;
+      patch.resume_summary = source.resume_summary;
+      patch.resume_experience_id = source.resume_experience_id;
+      patch.resume_updated_at = source.resume_updated_at;
+    }
+    const targetFilters =
+      target.filters && Object.keys(target.filters).length > 0;
+    const sourceFilters =
+      source.filters && Object.keys(source.filters).length > 0;
+    if (!targetFilters && sourceFilters) {
+      patch.filters = source.filters;
+    }
+  }
+  if (Object.keys(patch).length > 0) {
+    const { error } = await sb.from("users").update(patch).eq("id", targetUserId);
+    if (error) throw new Error(error.message);
+  }
+
+  const [swipesRes, matchesRes, lettersRes] = await Promise.all([
+    sb.from("swipes").select("*").eq("user_id", sourceUserId),
+    sb.from("match_scores").select("*").eq("user_id", sourceUserId),
+    sb.from("cover_letters").select("*").eq("user_id", sourceUserId),
+  ]);
+  if (swipesRes.error) throw new Error(swipesRes.error.message);
+  if (matchesRes.error) throw new Error(matchesRes.error.message);
+  if (lettersRes.error) throw new Error(lettersRes.error.message);
+
+  const swipes = (swipesRes.data ?? []).map((row) => ({
+    user_id: targetUserId,
+    vacancy_id: row.vacancy_id,
+    direction: row.direction,
+  }));
+  if (swipes.length > 0) {
+    const { error } = await sb
+      .from("swipes")
+      .upsert(swipes, { onConflict: "user_id,vacancy_id" });
+    if (error) throw new Error(error.message);
+  }
+
+  const matches = (matchesRes.data ?? []).map((row) => ({
+    user_id: targetUserId,
+    vacancy_id: row.vacancy_id,
+    score: row.score,
+    strengths: row.strengths ?? [],
+    gaps: row.gaps ?? [],
+    summary: row.summary ?? "",
+  }));
+  if (matches.length > 0) {
+    const { error } = await sb
+      .from("match_scores")
+      .upsert(matches, { onConflict: "user_id,vacancy_id" });
+    if (error) throw new Error(error.message);
+  }
+
+  const letters = (lettersRes.data ?? []).map((row) => ({
+    user_id: targetUserId,
+    id: row.id,
+    kind: row.kind,
+    vacancy_id: row.vacancy_id,
+    title: row.title,
+    company: row.company,
+    vacancy_text: row.vacancy_text,
+    letter_text: row.letter_text,
+    status: row.status,
+  }));
+  if (letters.length > 0) {
+    const { error } = await sb
+      .from("cover_letters")
+      .upsert(letters, { onConflict: "user_id,id" });
+    if (error) throw new Error(error.message);
+  }
+}
+
 /* ------------------------------- vacancies -------------------------------- */
 
 export async function upsertVacancies(

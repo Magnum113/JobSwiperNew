@@ -4,6 +4,7 @@ import {
   removeCoverLetter,
   type CoverLetterPayload,
 } from "@/lib/supabase/queries";
+import { resolveRequestUserId } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
-  const userId = String(body.userId ?? "");
+  const userId = await resolveRequestUserId(String(body.userId ?? ""));
   if (!userId) {
     return NextResponse.json({ error: "userId обязателен" }, { status: 400 });
   }

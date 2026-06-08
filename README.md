@@ -20,7 +20,8 @@ Tinder для вакансий с hh.ru. Свайпайте вакансии, у
   вакансии (не из hh.ru) — ИИ напишет под неё сопроводительное письмо, которое
   сохранится в списке откликов с пометкой «Своя вакансия».
 - **Фильтры** — профессия, город, опыт, график, занятость, зарплата, сортировка.
-- **Авторизация** — кнопки входа через Google / Яндекс (заглушки, как и задумано).
+- **Авторизация** — вход через Google OAuth в Supabase Auth; после входа данные
+  синхронизируются между устройствами.
 - Тёмная/светлая тема, адаптивный мобильный дизайн.
 
 ## Стек
@@ -36,9 +37,12 @@ Framer Motion · Zustand · TanStack Query · Supabase (Postgres) · unpdf + mam
    OPENROUTER_API_KEY=...
    HH_CLIENT_ID=...
    HH_CLIENT_SECRET=...
-   SUPABASE_URL=...                 # проект Supabase
-   SUPABASE_PUBLISHABLE_KEY=...     # publishable-ключ (используется только на сервере)
+  SUPABASE_URL=...                 # проект Supabase
+  SUPABASE_PUBLISHABLE_KEY=...     # publishable-ключ (используется только на сервере)
    ```
+   В Google OAuth должен быть разрешён Supabase callback
+   `https://<project-ref>.supabase.co/auth/v1/callback`, а в Supabase Auth Redirect
+   URLs — `http://localhost:3000/auth/callback` для dev.
 2. Установка и старт:
    ```bash
    npm install
@@ -53,8 +57,9 @@ Framer Motion · Zustand · TanStack Query · Supabase (Postgres) · unpdf + mam
   Токен получается через `client_credentials` и кэшируется в `.hh-token.json`
   (см. `src/lib/hh/token.ts`), автоматически обновляясь по истечении.
 - Резюме, вакансии, оценки соответствия, отклики и письма хранятся в **Supabase
-  (Postgres)**. В localStorage остаётся только анонимный `userId` устройства. Доступ
-  к БД — только через серверные `/api/db/*` роуты (ключ Supabase не попадает в браузер).
+  (Postgres)**. Для гостей используется анонимный `userId` устройства; после входа
+  через Google API-роуты используют verified `auth.getUser().id`. Доступ к БД —
+  только через серверные `/api/db/*` роуты (ключ Supabase не попадает в браузер).
 
 ## Структура
 
