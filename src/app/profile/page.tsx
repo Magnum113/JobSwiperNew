@@ -8,7 +8,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 
 export default function ProfilePage() {
@@ -18,20 +17,14 @@ export default function ProfilePage() {
         <BrandMark />
       </header>
 
-      <div className="space-y-5 px-4 py-5">
-        <div>
+      <div className="space-y-4 px-4 py-4">
+        <div className="pt-1">
           <h1 className="text-2xl font-bold tracking-tight">Личный кабинет</h1>
-          <p className="text-sm text-muted-foreground">
-            Резюме и аккаунт. Данные сохраняются в облаке (Supabase).
-          </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Аккаунт</CardTitle>
-            <CardDescription>
-              Войдите, чтобы синхронизировать отклики между устройствами.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <AuthButtons />

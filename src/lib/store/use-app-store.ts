@@ -10,6 +10,7 @@ import type {
 import type { HHVacancyItem } from "@/lib/hh/types";
 import { DEFAULT_AREA, DEFAULT_ORDER_BY } from "@/lib/hh/dictionaries";
 import {
+  type AuthUser,
   type RemoteState,
   pushProfile,
   pushFilters,
@@ -43,6 +44,11 @@ interface AppState {
   /** Anonymous device id (persisted as the only localStorage value). */
   userId: string;
   setUserId: (id: string) => void;
+
+  authUser: AuthUser | null;
+  authChecked: boolean;
+  setAuthUser: (user: AuthUser | null) => void;
+  setAuthChecked: (v: boolean) => void;
 
   hydrated: boolean;
   setHydrated: (v: boolean) => void;
@@ -85,6 +91,11 @@ interface AppState {
 export const useAppStore = create<AppState>()((set, get) => ({
   userId: "",
   setUserId: (id) => set({ userId: id }),
+
+  authUser: null,
+  authChecked: false,
+  setAuthUser: (user) => set({ authUser: user }),
+  setAuthChecked: (v) => set({ authChecked: v }),
 
   hydrated: false,
   setHydrated: (v) => set({ hydrated: v }),

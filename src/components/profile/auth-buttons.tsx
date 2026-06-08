@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { AuthUser } from "@/lib/db-sync";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 function GoogleIcon() {
   return (
@@ -41,24 +41,12 @@ function YandexIcon() {
 }
 
 export function AuthButtons() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const user = useAppStore((s) => s.authUser);
+  const authChecked = useAppStore((s) => s.authChecked);
+  const setAuthUser = useAppStore((s) => s.setAuthUser);
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/auth/session", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { user?: AuthUser | null } | null) => {
-        if (active) setUser(data?.user ?? null);
-      })
-      .catch(() => {
-        if (active) setUser(null);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
     const params = new URLSearchParams(window.location.search);
     const auth = params.get("auth");
     if (auth === "success") {
@@ -68,10 +56,6 @@ export function AuthButtons() {
       toast.error("Не удалось войти через Google");
       window.history.replaceState(null, "", window.location.pathname);
     }
-
-    return () => {
-      active = false;
-    };
   }, []);
 
   const signInWithGoogle = () => {
@@ -82,7 +66,7 @@ export function AuthButtons() {
     setSigningOut(true);
     try {
       await fetch("/api/auth/sign-out", { method: "POST" });
-      setUser(null);
+      setAuthUser(null);
       toast.success("Вы вышли из аккаунта");
       window.location.reload();
     } catch {
@@ -96,7 +80,7 @@ export function AuthButtons() {
       description: "Сейчас доступен вход через Google.",
     });
 
-  if (loading) {
+  if (!authChecked) {
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Button

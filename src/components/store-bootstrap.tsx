@@ -14,6 +14,8 @@ import {
  */
 export function StoreBootstrap() {
   const setUserId = useAppStore((s) => s.setUserId);
+  const setAuthUser = useAppStore((s) => s.setAuthUser);
+  const setAuthChecked = useAppStore((s) => s.setAuthChecked);
   const hydrateFromServer = useAppStore((s) => s.hydrateFromServer);
   const setHydrated = useAppStore((s) => s.setHydrated);
 
@@ -27,6 +29,8 @@ export function StoreBootstrap() {
         await mergeAnonymousState(anonymousId);
       }
       if (!active) return;
+      setAuthUser(user);
+      setAuthChecked(true);
       setUserId(id);
       const state = await pullState(id);
       if (active && state) hydrateFromServer(state);
@@ -36,12 +40,15 @@ export function StoreBootstrap() {
         console.warn("store-bootstrap error", error);
       })
       .finally(() => {
-        if (active) setHydrated(true);
+        if (active) {
+          setAuthChecked(true);
+          setHydrated(true);
+        }
       });
     return () => {
       active = false;
     };
-  }, [setUserId, hydrateFromServer, setHydrated]);
+  }, [setUserId, setAuthUser, setAuthChecked, hydrateFromServer, setHydrated]);
 
   return null;
 }
