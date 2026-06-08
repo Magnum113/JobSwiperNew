@@ -185,13 +185,9 @@ export function SwipeDeck({
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               style={{ zIndex: idx }}
             >
-              <div className="pointer-events-none h-full">
-                <SwipeCard
-                  vacancy={item}
-                  match={matches[item.id]}
-                  interactive={false}
-                />
-              </div>
+              {/* Cards behind the top one show only a clean card edge — no
+                  inner text, so nothing bleeds out below the active card. */}
+              <div className="pointer-events-none h-full rounded-[1.6rem] border border-border/70 bg-card shadow-card" />
             </motion.div>
           );
         })}

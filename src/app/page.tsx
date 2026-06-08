@@ -74,7 +74,23 @@ export default function HomePage() {
 
   const found = data?.pages?.[0]?.found ?? 0;
   const resumeContext = useMemo(() => buildResumeContext(profile), [profile]);
+  // Score in API order (scoring only covers a near-term window due to rate
+  // limits) so the displayed sort below doesn't shift which cards get scored.
   const loadingIds = useMatchScores(deckItems, resumeContext, enabled);
+
+  // Show the best matches first: scored cards by descending compatibility,
+  // then not-yet-scored cards in their original order. Ties keep API order so
+  // the deck stays stable as scores stream in.
+  const sortedItems = useMemo(() => {
+    return deckItems
+      .map((v, i) => ({ v, i, score: matches[v.id]?.score }))
+      .sort((a, b) => {
+        const sa = a.score ?? -1;
+        const sb = b.score ?? -1;
+        return sb !== sa ? sb - sa : a.i - b.i;
+      })
+      .map((x) => x.v);
+  }, [deckItems, matches]);
 
   // Keep the deck stocked.
   useEffect(() => {
@@ -167,7 +183,7 @@ export default function HomePage() {
   } else {
     body = (
       <SwipeDeck
-        items={deckItems}
+        items={sortedItems}
         matches={matches}
         loadingIds={loadingIds}
         onSwipe={handleSwipe}
