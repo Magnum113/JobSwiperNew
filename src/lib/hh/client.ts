@@ -4,7 +4,7 @@ import type {
   HHVacancyDetail,
   VacancySearchParams,
 } from "./types";
-import { getAppToken } from "./token";
+import { getAppToken, invalidateAppToken } from "./token";
 
 const HH_BASE = "https://api.hh.ru";
 
@@ -22,15 +22,35 @@ export class HHError extends Error {
   }
 }
 
+interface HHApiErrorItem {
+  type?: unknown;
+  value?: unknown;
+}
+
+interface HHApiErrorBody {
+  errors?: HHApiErrorItem[];
+}
+
 async function hhHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
-    "User-Agent": HH_UA,
+    "HH-User-Agent": HH_UA,
     Accept: "application/json",
   };
   // App token lifts anonymous CAPTCHA/anti-bot throttling.
   const token = await getAppToken().catch(() => null);
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
+}
+
+async function oauthErrorValue(res: Response): Promise<string | null> {
+  if (res.status !== 401 && res.status !== 403) return null;
+  const body = await res
+    .clone()
+    .json()
+    .catch(() => null) as HHApiErrorBody | null;
+  const errors = Array.isArray(body?.errors) ? body.errors : [];
+  const oauth = errors.find((e) => e?.type === "oauth");
+  return typeof oauth?.value === "string" ? oauth.value : null;
 }
 
 /**
@@ -43,8 +63,17 @@ async function hhGet(
 ): Promise<Response> {
   let res = await fetch(url, { ...init, headers: await hhHeaders() });
   if (res.status === 401 || res.status === 403) {
-    await getAppToken(true).catch(() => {});
-    res = await fetch(url, { ...init, headers: await hhHeaders() });
+    const rejectedToken = await getAppToken().catch(() => null);
+    const oauthValue = await oauthErrorValue(res);
+    if (oauthValue) {
+      await invalidateAppToken(rejectedToken ?? undefined);
+    }
+    const freshToken = await getAppToken(true, {
+      allowStaleFallback: !oauthValue,
+    }).catch(() => null);
+    if (freshToken && freshToken !== rejectedToken) {
+      res = await fetch(url, { ...init, headers: await hhHeaders() });
+    }
   }
   return res;
 }

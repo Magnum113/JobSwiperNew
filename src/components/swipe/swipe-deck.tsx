@@ -139,9 +139,18 @@ export function SwipeDeck({
   }, [top]);
 
   return (
-    <div className="flex w-full flex-col items-center gap-6">
+    <div
+      className="flex w-full flex-col items-center"
+      style={{ gap: "clamp(0.75rem, 1.7svh, 1.5rem)" }}
+    >
       {/* Card stack */}
-      <div className="relative aspect-[3/4.35] w-full">
+      <div
+        className="relative aspect-[3/4.35] w-full"
+        style={{
+          width:
+            "min(100%, 24rem, calc(max(20rem, min(34rem, calc(100svh - 18rem))) * 0.689655))",
+        }}
+      >
         {background.map((item, idx) => {
           // background[last] is the closest card behind the top one
           const depth = background.length - idx; // 1 or 2
@@ -185,17 +194,21 @@ export function SwipeDeck({
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-5 sm:gap-6">
         <button
           type="button"
           aria-label="Пропустить"
           onClick={() => topRef.current?.swipe("left")}
           disabled={!top}
           className={cn(
-            "flex size-16 items-center justify-center rounded-full border-2 border-rose-200 bg-background text-rose-500 shadow-card transition-all hover:scale-105 hover:border-rose-500 hover:bg-rose-500 hover:text-white active:scale-95 disabled:opacity-40 dark:border-rose-500/30",
+            "flex items-center justify-center rounded-full border-2 border-rose-200 bg-background text-rose-500 shadow-card transition-all hover:scale-105 hover:border-rose-500 hover:bg-rose-500 hover:text-white active:scale-95 disabled:opacity-40 dark:border-rose-500/30",
           )}
+          style={{
+            width: "clamp(3.5rem, 7svh, 4rem)",
+            height: "clamp(3.5rem, 7svh, 4rem)",
+          }}
         >
-          <X className="size-7" strokeWidth={3} />
+          <X className="size-6 sm:size-7" strokeWidth={3} />
         </button>
         <button
           type="button"
@@ -203,10 +216,14 @@ export function SwipeDeck({
           onClick={() => topRef.current?.swipe("right")}
           disabled={!top}
           className={cn(
-            "flex size-16 items-center justify-center rounded-full border-2 border-emerald-200 bg-background text-emerald-500 shadow-card transition-all hover:scale-105 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white active:scale-95 disabled:opacity-40 dark:border-emerald-500/30",
+            "flex items-center justify-center rounded-full border-2 border-emerald-200 bg-background text-emerald-500 shadow-card transition-all hover:scale-105 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white active:scale-95 disabled:opacity-40 dark:border-emerald-500/30",
           )}
+          style={{
+            width: "clamp(3.5rem, 7svh, 4rem)",
+            height: "clamp(3.5rem, 7svh, 4rem)",
+          }}
         >
-          <Heart className="size-7 fill-current" strokeWidth={2} />
+          <Heart className="size-6 fill-current sm:size-7" strokeWidth={2} />
         </button>
       </div>
     </div>

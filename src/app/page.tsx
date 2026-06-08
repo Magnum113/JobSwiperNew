@@ -186,7 +186,7 @@ export default function HomePage() {
 
       {/* Subtle status line */}
       {enabled && !isLoading && !isError && deckItems.length > 0 && (
-        <div className="px-4 pt-3 text-center">
+        <div className="px-4 pt-2 text-center sm:pt-3">
           <p className="text-xs text-muted-foreground">
             {found > 0 && (
               <>
@@ -204,7 +204,7 @@ export default function HomePage() {
       )}
 
       {/* Deck / states */}
-      <div className="flex flex-1 items-center justify-center px-4 py-4">
+      <div className="flex flex-1 items-start justify-center px-4 pb-3 pt-3 sm:py-4">
         <div className="w-full max-w-sm">{body}</div>
       </div>
 
