@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { postMatch } from "@/lib/api-client";
+import { pushMatches } from "@/lib/db-sync";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { HHVacancyItem } from "@/lib/hh/types";
 import type { MatchResult } from "@/lib/types";
@@ -20,6 +21,7 @@ export function useMatchScores(
 ) {
   const matches = useAppStore((s) => s.matches);
   const setMatches = useAppStore((s) => s.setMatches);
+  const userId = useAppStore((s) => s.userId);
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -65,17 +67,22 @@ export function useMatchScores(
     postMatch(resumeContext, pending)
       .then((results) => {
         const entries: Record<string, MatchResult> = {};
+        const toPersist: { vacancy: HHVacancyItem; match: MatchResult }[] = [];
         for (const r of results) {
           if (r.ok) {
-            entries[r.id] = {
+            const m: MatchResult = {
               score: r.score,
               strengths: r.strengths,
               gaps: r.gaps,
               summary: r.summary,
             };
+            entries[r.id] = m;
+            const vac = pending.find((v) => v.id === r.id);
+            if (vac) toPersist.push({ vacancy: vac, match: m });
           }
         }
         if (Object.keys(entries).length) setMatches(entries);
+        pushMatches(userId, toPersist);
       })
       .catch(() => {
         // Swallow — these stay "attempted" and simply show no score.

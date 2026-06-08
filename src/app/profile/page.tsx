@@ -22,7 +22,7 @@ export default function ProfilePage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Личный кабинет</h1>
           <p className="text-sm text-muted-foreground">
-            Резюме и аккаунт. Данные хранятся локально в этом браузере.
+            Резюме и аккаунт. Данные сохраняются в облаке (Supabase).
           </p>
         </div>
 

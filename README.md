@@ -26,8 +26,8 @@ Tinder для вакансий с hh.ru. Свайпайте вакансии, у
 ## Стек
 
 Next.js 16 (App Router) · TypeScript · Tailwind v4 · shadcn/ui (Base UI) ·
-Framer Motion · Zustand · TanStack Query · unpdf + mammoth (извлечение текста из
-PDF/DOCX).
+Framer Motion · Zustand · TanStack Query · Supabase (Postgres) · unpdf + mammoth
+(извлечение текста из PDF/DOCX).
 
 ## Запуск
 
@@ -36,6 +36,8 @@ PDF/DOCX).
    OPENROUTER_API_KEY=...
    HH_CLIENT_ID=...
    HH_CLIENT_SECRET=...
+   SUPABASE_URL=...                 # проект Supabase
+   SUPABASE_PUBLISHABLE_KEY=...     # publishable-ключ (используется только на сервере)
    ```
 2. Установка и старт:
    ```bash
@@ -50,7 +52,9 @@ PDF/DOCX).
 - Поиск вакансий hh.ru требует токен приложения (анонимные запросы ловит анти-бот).
   Токен получается через `client_credentials` и кэшируется в `.hh-token.json`
   (см. `src/lib/hh/token.ts`), автоматически обновляясь по истечении.
-- Резюме, лайки, оценки и письма хранятся локально в браузере (Zustand + localStorage).
+- Резюме, вакансии, оценки соответствия, отклики и письма хранятся в **Supabase
+  (Postgres)**. В localStorage остаётся только анонимный `userId` устройства. Доступ
+  к БД — только через серверные `/api/db/*` роуты (ключ Supabase не попадает в браузер).
 
 ## Структура
 

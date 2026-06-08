@@ -94,7 +94,7 @@ export default function HomePage() {
         description: "ИИ готовит сопроводительное письмо…",
       });
     } else {
-      pass(vacancy.id);
+      pass(vacancy);
     }
   };
 
