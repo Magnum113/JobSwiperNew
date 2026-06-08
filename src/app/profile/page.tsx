@@ -1,4 +1,4 @@
-import { ShieldCheck, SunMoon } from "lucide-react";
+import { SunMoon } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthButtons } from "@/components/profile/auth-buttons";
@@ -51,14 +51,6 @@ export default function ProfilePage() {
             </div>
           </div>
           <ThemeToggle />
-        </div>
-
-        <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0" />
-          <p>
-            Резюме отправляется только нашему ИИ-сервису для оценки соответствия
-            и подготовки сопроводительных писем. Мы не публикуем его на hh.ru.
-          </p>
         </div>
       </div>
     </div>
