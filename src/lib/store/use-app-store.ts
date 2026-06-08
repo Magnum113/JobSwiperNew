@@ -86,6 +86,35 @@ interface AppState {
   removeCustomLetter: (id: string) => void;
 
   resetSwipes: () => void;
+
+  /** Paywall / subscription (client-only, not synced to the server). */
+  paywallOpen: boolean;
+  paywallSource: string | null;
+  openPaywall: (source?: string) => void;
+  closePaywall: () => void;
+  /** One-time "we gifted you responses" bonus, persisted in localStorage. */
+  proBonusClaimed: boolean;
+  claimProBonus: () => void;
+}
+
+const BONUS_KEY = "jobswiper-pro-bonus";
+
+function readBonusClaimed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(BONUS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeBonusClaimed(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(BONUS_KEY, "1");
+  } catch {
+    // ignore — non-critical
+  }
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -253,5 +282,16 @@ export const useAppStore = create<AppState>()((set, get) => ({
   resetSwipes: () => {
     set({ seen: {}, liked: {} });
     resetSwipesRemote(get().userId);
+  },
+
+  paywallOpen: false,
+  paywallSource: null,
+  openPaywall: (source) =>
+    set({ paywallOpen: true, paywallSource: source ?? null }),
+  closePaywall: () => set({ paywallOpen: false }),
+  proBonusClaimed: readBonusClaimed(),
+  claimProBonus: () => {
+    writeBonusClaimed();
+    set({ proBonusClaimed: true });
   },
 }));

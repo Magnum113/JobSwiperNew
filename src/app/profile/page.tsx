@@ -3,6 +3,7 @@ import { BrandMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthButtons } from "@/components/profile/auth-buttons";
 import { ResumeForm } from "@/components/profile/resume-form";
+import { UpgradeCard } from "@/components/profile/upgrade-card";
 import {
   Card,
   CardContent,
@@ -21,6 +22,8 @@ export default function ProfilePage() {
         <div className="pt-1">
           <h1 className="text-2xl font-bold tracking-tight">Личный кабинет</h1>
         </div>
+
+        <UpgradeCard />
 
         <Card>
           <CardHeader>

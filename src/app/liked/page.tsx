@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Heart, Layers } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import { ProButton } from "@/components/paywall/pro-button";
 import { EmptyState } from "@/components/empty-state";
 import { LikedCard } from "@/components/liked/liked-card";
 import { CustomVacancySheet } from "@/components/custom/custom-vacancy-sheet";
@@ -42,6 +43,7 @@ export default function LikedPage() {
     <div className="flex flex-1 flex-col">
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl">
         <BrandMark />
+        <ProButton source="liked-header" />
       </header>
 
       <div className="space-y-4 px-4 py-4">

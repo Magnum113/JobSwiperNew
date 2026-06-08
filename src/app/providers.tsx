@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { StoreBootstrap } from "@/components/store-bootstrap";
 import { AuthCodeBridge } from "@/components/auth-code-bridge";
+import { PaywallDialog } from "@/components/paywall/paywall-dialog";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -27,6 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <AuthCodeBridge />
         <StoreBootstrap />
         {children}
+        <PaywallDialog />
         <Toaster richColors position="top-center" />
       </QueryClientProvider>
     </ThemeProvider>

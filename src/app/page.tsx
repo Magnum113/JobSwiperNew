@@ -9,6 +9,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import { ProButton } from "@/components/paywall/pro-button";
 import { FiltersSheet } from "@/components/filters/filters-sheet";
 import { SwipeDeck } from "@/components/swipe/swipe-deck";
 import { VacancyDetailDialog } from "@/components/vacancy/vacancy-detail-dialog";
@@ -197,7 +198,10 @@ export default function HomePage() {
       {/* Header */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl">
         <BrandMark />
-        <FiltersSheet />
+        <div className="flex items-center gap-2">
+          <ProButton source="feed-header" />
+          <FiltersSheet />
+        </div>
       </header>
 
       {/* Subtle status line */}
