@@ -62,6 +62,7 @@ HH_CLIENT_ID=...               # OAuth-приложение hh.ru
 HH_CLIENT_SECRET=...           # секрет приложения hh.ru
 SUPABASE_URL=...               # URL проекта Supabase
 SUPABASE_PUBLISHABLE_KEY=...   # publishable-ключ (используется только серверно)
+NEXT_PUBLIC_SITE_URL=https://jobswiper.ru  # production URL для OAuth callback
 ```
 
 Для Google OAuth:
@@ -71,6 +72,11 @@ SUPABASE_PUBLISHABLE_KEY=...   # publishable-ключ (используется 
 - в Supabase Auth Redirect URLs добавлен app callback:
   `http://localhost:3000/auth/callback` для dev и `https://<домен>/auth/callback`
   для production.
+
+`/api/auth/google` строит `redirectTo` из `NEXT_PUBLIC_SITE_URL` / `SITE_URL` /
+`APP_URL` / Vercel URL, а только затем из request origin. Это важно за reverse proxy:
+иначе OAuth может получить `http://localhost:3000` и Supabase вернёт code на
+локальный URL вместо production-домена.
 
 Файл **`.hh-token.json`** (создаётся автоматически, в `.gitignore`) — кэш
 app-токена hh.ru. См. раздел 5.

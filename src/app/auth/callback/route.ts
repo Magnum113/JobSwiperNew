@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAuthClient } from "@/lib/supabase/auth";
+import { getAppOrigin } from "@/lib/site-url";
 
 export const runtime = "nodejs";
 
@@ -18,18 +19,19 @@ function safeNextPath(value: string | null): string {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
+  const appOrigin = getAppOrigin(req);
   const code = url.searchParams.get("code");
   const next = safeNextPath(url.searchParams.get("next"));
 
   if (code) {
     const supabase = await createSupabaseAuthClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    const redirectUrl = new URL(next, url.origin);
+    const redirectUrl = new URL(next, appOrigin);
     redirectUrl.searchParams.set("auth", error ? "error" : "success");
     return redirectNoStore(redirectUrl);
   }
 
-  const redirectUrl = new URL("/profile", url.origin);
+  const redirectUrl = new URL("/profile", appOrigin);
   redirectUrl.searchParams.set("auth", "error");
   return redirectNoStore(redirectUrl);
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAuthClient } from "@/lib/supabase/auth";
+import { getAppOrigin } from "@/lib/site-url";
 
 export const runtime = "nodejs";
 
@@ -11,8 +12,9 @@ function redirectNoStore(url: string | URL) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
+  const appOrigin = getAppOrigin(req);
   const next = url.searchParams.get("next") || "/profile";
-  const redirectTo = new URL("/auth/callback", url.origin);
+  const redirectTo = new URL("/auth/callback", appOrigin);
   redirectTo.searchParams.set("next", next);
 
   const supabase = await createSupabaseAuthClient();
@@ -24,7 +26,7 @@ export async function GET(req: Request) {
   });
 
   if (error || !data.url) {
-    const fallback = new URL("/profile", url.origin);
+    const fallback = new URL("/profile", appOrigin);
     fallback.searchParams.set("auth", "error");
     return redirectNoStore(fallback);
   }

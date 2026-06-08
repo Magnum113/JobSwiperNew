@@ -37,12 +37,14 @@ Framer Motion · Zustand · TanStack Query · Supabase (Postgres) · unpdf + mam
    OPENROUTER_API_KEY=...
    HH_CLIENT_ID=...
    HH_CLIENT_SECRET=...
-  SUPABASE_URL=...                 # проект Supabase
-  SUPABASE_PUBLISHABLE_KEY=...     # publishable-ключ (используется только на сервере)
+   SUPABASE_URL=...                 # проект Supabase
+   SUPABASE_PUBLISHABLE_KEY=...     # publishable-ключ (используется только на сервере)
+   NEXT_PUBLIC_SITE_URL=https://jobswiper.ru  # production URL для OAuth callback
    ```
    В Google OAuth должен быть разрешён Supabase callback
    `https://<project-ref>.supabase.co/auth/v1/callback`, а в Supabase Auth Redirect
-   URLs — `http://localhost:3000/auth/callback` для dev.
+   URLs — `http://localhost:3000/auth/callback` для dev и
+   `https://jobswiper.ru/auth/callback` для production.
 2. Установка и старт:
    ```bash
    npm install
