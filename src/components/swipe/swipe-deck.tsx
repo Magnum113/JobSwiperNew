@@ -159,7 +159,7 @@ export function SwipeDeck({
   return (
     <div
       className="flex w-full flex-col items-center"
-      style={{ gap: "clamp(0.75rem, 1.7svh, 1.5rem)" }}
+      style={{ gap: "30px" }}
     >
       {/* Card stack */}
       <div
@@ -212,7 +212,7 @@ export function SwipeDeck({
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-5 sm:mt-[45px] sm:gap-6">
+      <div className="flex items-center gap-5 sm:gap-6">
         <button
           type="button"
           aria-label="Пропустить"
