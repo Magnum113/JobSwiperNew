@@ -42,6 +42,22 @@ const TopCard = forwardRef<TopCardHandle, TopCardProps>(function TopCard(
   const likeOpacity = useTransform(x, [30, 130], [0, 1]);
   const nopeOpacity = useTransform(x, [-30, -130], [0, 1]);
   const leaving = useRef(false);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+
+  // A tap (not a drag) anywhere on the card opens the full details — handy when
+  // a long title pushes the footer button out of the clipped card area.
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (leaving.current) return;
+    const start = pointerStart.current;
+    if (!start) return;
+    const moved =
+      Math.abs(e.clientX - start.x) > 8 || Math.abs(e.clientY - start.y) > 8;
+    if (!moved) onDetails();
+  };
 
   const swipe = (dir: SwipeDirection) => {
     if (leaving.current) return;
@@ -80,6 +96,8 @@ const TopCard = forwardRef<TopCardHandle, TopCardProps>(function TopCard(
       dragElastic={0.7}
       dragMomentum={false}
       onDragEnd={handleDragEnd}
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
       initial={{ scale: 0.96, y: 8, opacity: 0.6 }}
       animate={{ scale: 1, y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 28 }}
@@ -194,7 +212,7 @@ export function SwipeDeck({
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-5 sm:gap-6">
+      <div className="flex items-center gap-5 sm:mt-[45px] sm:gap-6">
         <button
           type="button"
           aria-label="Пропустить"

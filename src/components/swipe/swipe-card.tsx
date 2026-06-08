@@ -161,7 +161,10 @@ export function SwipeCard({
           type="button"
           variant="secondary"
           className="w-full rounded-xl"
-          onClick={onDetails}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDetails?.();
+          }}
           tabIndex={interactive ? 0 : -1}
         >
           <Info className="size-4" />
