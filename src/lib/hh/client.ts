@@ -148,6 +148,28 @@ interface HHAreaNode {
 // cache the small flattened result in memory for the process lifetime instead.
 let areasCache: { id: string; name: string }[] | null = null;
 
+// hh.ru returns the area tree in its own (roughly alphabetical-by-region) order,
+// so the head of the flattened list is obscure small towns. Surface the biggest
+// cities first instead — matched by name so we use hh.ru's real ids.
+const POPULAR_CITIES = [
+  "Москва",
+  "Санкт-Петербург",
+  "Новосибирск",
+  "Екатеринбург",
+  "Казань",
+  "Нижний Новгород",
+  "Челябинск",
+  "Самара",
+  "Уфа",
+  "Ростов-на-Дону",
+  "Краснодар",
+  "Омск",
+  "Воронеж",
+  "Пермь",
+  "Волгоград",
+  "Красноярск",
+];
+
 /** Flatten the Russia area tree into a popular -> all city list (id, name). */
 export async function getRussianAreas(): Promise<{ id: string; name: string }[]> {
   if (areasCache) return areasCache;
@@ -158,14 +180,32 @@ export async function getRussianAreas(): Promise<{ id: string; name: string }[]>
   }
   const russia = (await res.json()) as HHAreaNode;
 
-  const out: { id: string; name: string }[] = [
-    { id: "113", name: "Вся Россия" },
-  ];
-  // russia.areas = regions; each region may contain cities.
+  // Flatten regions + their cities in tree order first.
+  const all: { id: string; name: string }[] = [];
   for (const region of russia.areas ?? []) {
-    out.push({ id: region.id, name: region.name });
+    all.push({ id: region.id, name: region.name });
     for (const city of region.areas ?? []) {
-      out.push({ id: city.id, name: city.name });
+      all.push({ id: city.id, name: city.name });
+    }
+  }
+
+  const byName = new Map<string, { id: string; name: string }>();
+  for (const a of all) if (!byName.has(a.name)) byName.set(a.name, a);
+
+  // "Вся Россия", then major cities, then everything else in tree order.
+  const out: { id: string; name: string }[] = [{ id: "113", name: "Вся Россия" }];
+  const used = new Set<string>(["113"]);
+  for (const name of POPULAR_CITIES) {
+    const a = byName.get(name);
+    if (a && !used.has(a.id)) {
+      out.push(a);
+      used.add(a.id);
+    }
+  }
+  for (const a of all) {
+    if (!used.has(a.id)) {
+      out.push(a);
+      used.add(a.id);
     }
   }
 
