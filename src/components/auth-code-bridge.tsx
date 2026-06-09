@@ -15,6 +15,8 @@ export function AuthCodeBridge() {
     const callback = new URL("/auth/callback", window.location.origin);
     callback.searchParams.set("code", code);
     callback.searchParams.set("next", next);
+    const provider = params.get("provider");
+    if (provider) callback.searchParams.set("provider", provider);
     window.location.replace(callback.toString());
   }, []);
 

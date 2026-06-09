@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { getAuthUser } from "@/lib/db-sync";
 import { useAppStore } from "@/lib/store/use-app-store";
 
+interface AuthIssue {
+  title: string;
+  detail?: string;
+}
+
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
@@ -50,6 +55,7 @@ function YandexIcon() {
 
 export function AuthButtons() {
   const [signingOut, setSigningOut] = useState(false);
+  const [authIssue, setAuthIssue] = useState<AuthIssue | null>(null);
   const user = useAppStore((s) => s.authUser);
   const authChecked = useAppStore((s) => s.authChecked);
   const setAuthUser = useAppStore((s) => s.setAuthUser);
@@ -69,13 +75,24 @@ export function AuthButtons() {
         setAuthUser(freshUser);
         setAuthChecked(true);
         if (!freshUser) {
+          setAuthIssue({
+            title: "Сессия аккаунта не появилась",
+            detail:
+              "OAuth вернул success, но Supabase session endpoint всё ещё отдаёт null.",
+          });
           toast.error(
             "Вход прошёл, но сессия аккаунта не появилась. Попробуйте войти ещё раз.",
           );
+        } else {
+          setAuthIssue(null);
         }
       });
       window.history.replaceState(null, "", window.location.pathname);
     } else if (auth === "error") {
+      setAuthIssue({
+        title: `Не удалось войти через ${providerName}`,
+        detail: authError ?? undefined,
+      });
       toast.error(
         authError
           ? `Не удалось войти через ${providerName}: ${authError}`
@@ -159,23 +176,35 @@ export function AuthButtons() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <Button
-        variant="outline"
-        className="h-11 justify-center gap-2 rounded-xl"
-        onClick={signInWithGoogle}
-      >
-        <GoogleIcon />
-        Войти через Google
-      </Button>
-      <Button
-        variant="outline"
-        className="h-11 justify-center gap-2 rounded-xl"
-        onClick={signInWithYandex}
-      >
-        <YandexIcon />
-        Войти через Яндекс
-      </Button>
+    <div className="space-y-3">
+      {authIssue && (
+        <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
+          <p className="font-medium text-destructive">{authIssue.title}</p>
+          {authIssue.detail ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {authIssue.detail}
+            </p>
+          ) : null}
+        </div>
+      )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Button
+          variant="outline"
+          className="h-11 justify-center gap-2 rounded-xl"
+          onClick={signInWithGoogle}
+        >
+          <GoogleIcon />
+          Войти через Google
+        </Button>
+        <Button
+          variant="outline"
+          className="h-11 justify-center gap-2 rounded-xl"
+          onClick={signInWithYandex}
+        >
+          <YandexIcon />
+          Войти через Яндекс
+        </Button>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,10 @@ import { getAppOrigin } from "@/lib/site-url";
 
 export const runtime = "nodejs";
 
-const YANDEX_SCOPES = "login:info login:email";
+// Yandex expects comma-separated OAuth permissions in the provider `scope`
+// query parameter. Supabase's generic `scopes` option is space-separated and
+// can override the dashboard value in a shape Yandex does not accept reliably.
+const YANDEX_SCOPE = "login:info,login:email";
 
 function redirectNoStore(url: string | URL) {
   const response = NextResponse.redirect(url);
@@ -33,7 +36,9 @@ export async function GET(req: Request) {
     provider: getYandexProvider(),
     options: {
       redirectTo: redirectTo.toString(),
-      scopes: YANDEX_SCOPES,
+      queryParams: {
+        scope: YANDEX_SCOPE,
+      },
     },
   });
 
