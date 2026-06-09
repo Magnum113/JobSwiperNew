@@ -18,6 +18,17 @@ export function BottomNav() {
   const likedCount = useAppStore((s) => Object.keys(s.liked).length);
   const reduce = useReducedMotion();
 
+  // Cap the label and shrink the font as digits grow so the badge never clips.
+  const badgeText = likedCount > 999 ? "999+" : String(likedCount);
+  const badgeFont =
+    badgeText.length >= 4
+      ? "text-[8px]"
+      : badgeText.length === 3
+        ? "text-[9px]"
+        : badgeText.length === 2
+          ? "text-[10px]"
+          : "text-[11px]";
+
   // The sliding gradient highlight ("magic move") + active-label reveal springs.
   const pillTransition = reduce
     ? { duration: 0 }
@@ -46,7 +57,9 @@ export function BottomNav() {
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex h-11 items-center justify-center overflow-hidden rounded-full text-sm font-medium outline-none transition-[width,color] duration-300 focus-visible:ring-2 focus-visible:ring-ring",
+                // No overflow-hidden here, or the count badge would be clipped;
+                // the collapsing label clips itself (see its own overflow-hidden).
+                "relative flex h-11 items-center justify-center rounded-full text-sm font-medium outline-none transition-[width,color] duration-300 focus-visible:ring-2 focus-visible:ring-ring",
                 active ? "w-[6.25rem]" : "w-11",
                 active ? "text-white" : "text-muted-foreground hover:text-foreground",
               )}
@@ -104,11 +117,12 @@ export function BottomNav() {
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 20 }}
                   className={cn(
-                    "absolute -right-0.5 -top-0.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold tabular-nums",
+                    "absolute -right-1 -top-1 z-20 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-bold leading-none tabular-nums ring-2 ring-background",
+                    badgeFont,
                     active ? "bg-white text-primary" : "bg-gradient-brand text-white",
                   )}
                 >
-                  {likedCount > 99 ? "99+" : likedCount}
+                  {badgeText}
                 </motion.span>
               )}
             </Link>
