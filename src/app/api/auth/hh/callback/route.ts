@@ -8,25 +8,18 @@ import {
 } from "@/lib/auth/app-session";
 import {
   clearHhTempCookies,
+  exchangeHhCodeForToken,
+  fetchHhMe,
   logHhAuth,
   redirectNoStore,
   safeAuthError,
   safeNextPath,
   warnHhAuth,
-  HH_API_BASE,
   HH_AUTH_NEXT_COOKIE,
   HH_AUTH_STATE_COOKIE,
   HH_AUTH_VERIFIER_COOKIE,
 } from "@/lib/auth/hh";
-import { exchangeHhCode, hhUserGet } from "@/lib/hh/user-token";
-import { mapHhResumeToProfile } from "@/lib/hh/resume-map";
-import { saveHhConnection, saveProfile } from "@/lib/supabase/queries";
 import { getAppOrigin } from "@/lib/site-url";
-import type {
-  HHMeResponse,
-  HHResumeDetail,
-  HHResumeListResponse,
-} from "@/lib/hh/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,21 +32,16 @@ function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-/**
- * Build the redirect back to the app. `hh` carries the resume-import outcome so
- * the profile page can react (single import, chooser, or empty).
- */
 function resultRedirect(
   appOrigin: string,
   next: string,
   result: "success" | "error",
-  opts: { error?: string; hh?: "imported" | "choose" | "empty" | "error" } = {},
+  error?: string,
 ) {
   const redirectUrl = new URL(next, appOrigin);
   redirectUrl.searchParams.set("auth", result);
   redirectUrl.searchParams.set("provider", "hh");
-  if (opts.error) redirectUrl.searchParams.set("auth_error", safeAuthError(opts.error));
-  if (opts.hh) redirectUrl.searchParams.set("hh", opts.hh);
+  if (error) redirectUrl.searchParams.set("auth_error", safeAuthError(error));
 
   const response = redirectNoStore(redirectUrl);
   clearHhTempCookies(response);
@@ -88,39 +76,31 @@ export async function GET(req: Request) {
 
   if (oauthError) {
     warnHhAuth("provider_error", { rid, error: safeAuthError(oauthError) });
-    return resultRedirect(appOrigin, next, "error", { error: oauthError });
+    return resultRedirect(appOrigin, next, "error", oauthError);
   }
   if (!code) {
     warnHhAuth("missing_code", { rid });
-    return resultRedirect(appOrigin, next, "error", { error: "OAuth code is missing" });
+    return resultRedirect(appOrigin, next, "error", "OAuth code is missing");
   }
   if (!state || !expectedState || state !== expectedState) {
     warnHhAuth("state_mismatch", { rid });
-    return resultRedirect(appOrigin, next, "error", { error: "OAuth state mismatch" });
+    return resultRedirect(appOrigin, next, "error", "OAuth state mismatch");
   }
   if (!verifier) {
     warnHhAuth("missing_verifier", { rid });
-    return resultRedirect(appOrigin, next, "error", {
-      error: "OAuth code verifier is missing",
-    });
+    return resultRedirect(appOrigin, next, "error", "OAuth code verifier is missing");
   }
 
   try {
     const redirectUri = new URL("/api/auth/hh/callback", appOrigin).toString();
-    const token = await exchangeHhCode(code, verifier, redirectUri);
-    logHhAuth("token_received", { rid, hasRefreshToken: Boolean(token.refreshToken) });
+    const accessToken = await exchangeHhCodeForToken(code, verifier, redirectUri);
 
-    const me = await hhUserGet<HHMeResponse>(token.accessToken, "/me");
+    // Use the user token once, just to read identity; we don't store it.
+    const me = await fetchHhMe(accessToken);
     const hhUserId = str(me.id);
     if (!hhUserId) {
       warnHhAuth("me_missing_id", { rid });
-      return resultRedirect(appOrigin, next, "error", { error: "hh.ru user id is missing" });
-    }
-    if (me.is_applicant === false) {
-      warnHhAuth("not_applicant", { rid });
-      return resultRedirect(appOrigin, next, "error", {
-        error: "Войдите аккаунтом соискателя hh.ru",
-      });
+      return resultRedirect(appOrigin, next, "error", "hh.ru user id is missing");
     }
 
     const fullName = [str(me.first_name), str(me.last_name)]
@@ -135,63 +115,22 @@ export async function GET(req: Request) {
       provider: "hh",
     };
 
-    // Set the session first so the rest is attributed to the right account.
-    const probe = resultRedirect(appOrigin, next, "success");
-    if (!setAppSessionCookie(probe, user)) {
+    const response = resultRedirect(appOrigin, next, "success");
+    if (!setAppSessionCookie(response, user)) {
       warnHhAuth("session_secret_missing", { rid });
-      return resultRedirect(appOrigin, next, "error", {
-        error: "APP_SESSION_SECRET is not configured",
-      });
+      return resultRedirect(
+        appOrigin,
+        next,
+        "error",
+        "APP_SESSION_SECRET is not configured",
+      );
     }
 
-    await saveHhConnection(user.id, {
-      hhUserId,
-      accessToken: token.accessToken,
-      refreshToken: token.refreshToken,
-      expiresAt: token.expiresAt,
-    });
-
-    // Resume import is best-effort: the user is already authenticated (session
-    // + tokens saved), so a hiccup pulling resumes must not fail the login.
-    // NOTE: hh.ru closed the applicant resume API (/resumes/mine, /resumes/{id})
-    // on 2025-12-15 — general OAuth apps now get 403 forbidden there, so import
-    // typically ends in `error`. We surface that distinctly from a genuine
-    // `empty` (0 resumes) so the UI can tell the user to add a resume manually.
-    let outcome: "imported" | "choose" | "empty" | "error" = "empty";
-    try {
-      // Use the URL hh.ru gives us, don't hardcode.
-      const resumesUrl = str(me.resumes_url) ?? `${HH_API_BASE}/resumes/mine`;
-      const list = await hhUserGet<HHResumeListResponse>(token.accessToken, resumesUrl);
-      const items = Array.isArray(list.items) ? list.items : [];
-
-      if (items.length === 1) {
-        const detail = await hhUserGet<HHResumeDetail>(
-          token.accessToken,
-          `/resumes/${encodeURIComponent(items[0].id)}`,
-        );
-        await saveProfile(user.id, mapHhResumeToProfile(detail));
-        outcome = "imported";
-      } else if (items.length > 1) {
-        outcome = "choose";
-      }
-      logHhAuth("success", { rid, resumes: items.length, outcome });
-    } catch (resumeError) {
-      outcome = "error";
-      warnHhAuth("resume_import_failed", {
-        rid,
-        message: safeAuthError(
-          resumeError instanceof Error ? resumeError.message : "resume import failed",
-        ),
-      });
-    }
-
-    // Re-issue the final redirect carrying the outcome, keeping the session.
-    const response = resultRedirect(appOrigin, next, "success", { hh: outcome });
-    setAppSessionCookie(response, user);
+    logHhAuth("success", { rid, hasEmail: Boolean(user.email), hasName: Boolean(user.name) });
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "hh.ru OAuth failed";
     warnHhAuth("callback_failed", { rid, message: safeAuthError(message) });
-    return resultRedirect(appOrigin, next, "error", { error: message });
+    return resultRedirect(appOrigin, next, "error", message);
   }
 }

@@ -2,7 +2,6 @@ import { SunMoon } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthButtons } from "@/components/profile/auth-buttons";
-import { HhResumeImport } from "@/components/profile/hh-resume-import";
 import { ResumeForm } from "@/components/profile/resume-form";
 import { UpgradeCard } from "@/components/profile/upgrade-card";
 import {
@@ -36,7 +35,6 @@ export default function ProfilePage() {
         </Card>
 
         <ResumeForm />
-        <HhResumeImport />
 
         <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3">
           <div className="flex items-center gap-2.5">

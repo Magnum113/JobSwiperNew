@@ -73,67 +73,6 @@ export interface HHSearchResponse {
   items: HHVacancyItem[];
 }
 
-/* ----------------------- Applicant resumes (user OAuth) ------------------- */
-
-/** `GET /me` for an authorized applicant (only the fields we use). */
-export interface HHMeResponse {
-  id?: string;
-  email?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  mid_name?: string | null;
-  middle_name?: string | null;
-  is_applicant?: boolean;
-  /** URL to GET the current user's resume list (use this, don't hardcode). */
-  resumes_url?: string | null;
-}
-
-export interface HHTotalExperience {
-  months: number | null;
-}
-
-/** A resume as it appears in the `resumes_url` list (short form). */
-export interface HHResumeListItem {
-  id: string;
-  title: string | null;
-  area?: HHArea | null;
-  total_experience?: HHTotalExperience | null;
-  updated_at?: string | null;
-  alternate_url?: string | null;
-}
-
-export interface HHResumeListResponse {
-  found?: number;
-  items: HHResumeListItem[];
-}
-
-/** Work-experience entry from a full resume. */
-export interface HHResumeExperience {
-  company?: string | null;
-  position?: string | null;
-  description?: string | null;
-  start?: string | null;
-  end?: string | null;
-}
-
-export interface HHResumeProfessionalRole {
-  id?: string;
-  name?: string | null;
-}
-
-/** Full resume from `GET /resumes/{resume_id}` (only the fields we map). */
-export interface HHResumeDetail extends HHResumeListItem {
-  /** Free-form skills description text. */
-  skills?: string | null;
-  /** Unique key-skill strings. */
-  skill_set?: string[] | null;
-  professional_roles?: HHResumeProfessionalRole[] | null;
-  experience?: HHResumeExperience[] | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  middle_name?: string | null;
-}
-
 /** Normalized search params our /api/vacancies route accepts. */
 export interface VacancySearchParams {
   text?: string;
