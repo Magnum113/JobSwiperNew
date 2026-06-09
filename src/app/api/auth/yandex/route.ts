@@ -10,17 +10,25 @@ function redirectNoStore(url: string | URL) {
   return response;
 }
 
+function getYandexProvider(): `custom:${string}` {
+  const configured = process.env.SUPABASE_YANDEX_PROVIDER_ID?.trim();
+  if (!configured) return "custom:yandex";
+  return configured.startsWith("custom:")
+    ? (configured as `custom:${string}`)
+    : `custom:${configured}`;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const appOrigin = getAppOrigin(req);
   const next = url.searchParams.get("next") || "/profile";
   const redirectTo = new URL("/auth/callback", appOrigin);
   redirectTo.searchParams.set("next", next);
-  redirectTo.searchParams.set("provider", "google");
+  redirectTo.searchParams.set("provider", "yandex");
 
   const supabase = await createSupabaseAuthClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+    provider: getYandexProvider(),
     options: {
       redirectTo: redirectTo.toString(),
     },
@@ -29,6 +37,7 @@ export async function GET(req: Request) {
   if (error || !data.url) {
     const fallback = new URL("/profile", appOrigin);
     fallback.searchParams.set("auth", "error");
+    fallback.searchParams.set("provider", "yandex");
     return redirectNoStore(fallback);
   }
 

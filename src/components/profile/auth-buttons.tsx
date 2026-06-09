@@ -49,17 +49,23 @@ export function AuthButtons() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const auth = params.get("auth");
+    const provider = params.get("provider");
+    const providerName = provider === "yandex" ? "Яндекс" : "Google";
     if (auth === "success") {
-      toast.success("Вы вошли через Google");
+      toast.success(`Вы вошли через ${providerName}`);
       window.history.replaceState(null, "", window.location.pathname);
     } else if (auth === "error") {
-      toast.error("Не удалось войти через Google");
+      toast.error(`Не удалось войти через ${providerName}`);
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, []);
 
   const signInWithGoogle = () => {
     window.location.assign("/api/auth/google?next=/profile");
+  };
+
+  const signInWithYandex = () => {
+    window.location.assign("/api/auth/yandex?next=/profile");
   };
 
   const signOut = async () => {
@@ -74,11 +80,6 @@ export function AuthButtons() {
       setSigningOut(false);
     }
   };
-
-  const notifyYandex = () =>
-    toast.info("Вход через Яндекс пока не подключён", {
-      description: "Сейчас доступен вход через Google.",
-    });
 
   if (!authChecked) {
     return (
@@ -108,7 +109,7 @@ export function AuthButtons() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">
-            {user.name || user.email || "Google аккаунт"}
+            {user.name || user.email || "Аккаунт"}
           </p>
           {user.email ? (
             <p className="truncate text-xs text-muted-foreground">
@@ -142,7 +143,7 @@ export function AuthButtons() {
       <Button
         variant="outline"
         className="h-11 justify-center gap-2 rounded-xl"
-        onClick={notifyYandex}
+        onClick={signInWithYandex}
       >
         <YandexIcon />
         Войти через Яндекс
