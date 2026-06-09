@@ -19,6 +19,7 @@ export function PaywallDialog() {
   const closePaywall = useAppStore((s) => s.closePaywall);
   const proBonusClaimed = useAppStore((s) => s.proBonusClaimed);
   const claimProBonus = useAppStore((s) => s.claimProBonus);
+  const openGiftDialog = useAppStore((s) => s.openGiftDialog);
 
   // Default to the recommended (highlighted) plan.
   const [planId, setPlanId] = useState<Plan["id"]>("month");
@@ -26,13 +27,10 @@ export function PaywallDialog() {
   const plan = PLANS.find((p) => p.id === planId) ?? PLANS[0];
 
   const handlePay = () => {
+    closePaywall();
     if (!proBonusClaimed) {
       claimProBonus();
-      toast.success("Оплата скоро откроется", {
-        description:
-          "Сервис в активной разработке — платежи подключаем совсем скоро. А пока дарим вам 50 откликов бесплатно 🎁",
-        duration: 7000,
-      });
+      openGiftDialog();
     } else {
       toast("Оплата скоро откроется", {
         description:
@@ -40,7 +38,6 @@ export function PaywallDialog() {
         duration: 6000,
       });
     }
-    closePaywall();
   };
 
   return (

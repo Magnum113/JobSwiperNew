@@ -7,6 +7,7 @@ import { StoreBootstrap } from "@/components/store-bootstrap";
 import { AuthCodeBridge } from "@/components/auth-code-bridge";
 import { PaywallDialog } from "@/components/paywall/paywall-dialog";
 import { LimitReachedDialog } from "@/components/paywall/limit-reached-dialog";
+import { GiftDialog } from "@/components/paywall/gift-dialog";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -31,6 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {children}
         <PaywallDialog />
         <LimitReachedDialog />
+        <GiftDialog />
         <Toaster richColors position="top-center" />
       </QueryClientProvider>
     </ThemeProvider>

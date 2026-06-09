@@ -107,6 +107,11 @@ interface AppState {
   limitDialogKind: LimitKind | null;
   openLimitDialog: (kind: LimitKind) => void;
   closeLimitDialog: () => void;
+
+  /** Celebratory "+50 responses" gift popup. */
+  giftDialogOpen: boolean;
+  openGiftDialog: () => void;
+  closeGiftDialog: () => void;
 }
 
 export type LimitKind = "responses" | "analyses" | "resumes";
@@ -336,4 +341,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   limitDialogKind: null,
   openLimitDialog: (kind) => set({ limitDialogKind: kind }),
   closeLimitDialog: () => set({ limitDialogKind: null }),
+
+  giftDialogOpen: false,
+  openGiftDialog: () => set({ giftDialogOpen: true }),
+  closeGiftDialog: () => set({ giftDialogOpen: false }),
 }));
