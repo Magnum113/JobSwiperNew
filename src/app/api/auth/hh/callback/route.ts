@@ -47,7 +47,7 @@ function resultRedirect(
   appOrigin: string,
   next: string,
   result: "success" | "error",
-  opts: { error?: string; hh?: "imported" | "choose" | "empty" } = {},
+  opts: { error?: string; hh?: "imported" | "choose" | "empty" | "error" } = {},
 ) {
   const redirectUrl = new URL(next, appOrigin);
   redirectUrl.searchParams.set("auth", result);
@@ -152,10 +152,12 @@ export async function GET(req: Request) {
     });
 
     // Resume import is best-effort: the user is already authenticated (session
-    // + tokens saved), so a hiccup pulling resumes must not fail the login. On
-    // failure we land them signed in with no auto-import (?hh=empty); the
-    // chooser still works later via /api/hh/resumes.
-    let outcome: "imported" | "choose" | "empty" = "empty";
+    // + tokens saved), so a hiccup pulling resumes must not fail the login.
+    // NOTE: hh.ru closed the applicant resume API (/resumes/mine, /resumes/{id})
+    // on 2025-12-15 — general OAuth apps now get 403 forbidden there, so import
+    // typically ends in `error`. We surface that distinctly from a genuine
+    // `empty` (0 resumes) so the UI can tell the user to add a resume manually.
+    let outcome: "imported" | "choose" | "empty" | "error" = "empty";
     try {
       // Use the URL hh.ru gives us, don't hardcode.
       const resumesUrl = str(me.resumes_url) ?? `${HH_API_BASE}/resumes/mine`;
@@ -174,6 +176,7 @@ export async function GET(req: Request) {
       }
       logHhAuth("success", { rid, resumes: items.length, outcome });
     } catch (resumeError) {
+      outcome = "error";
       warnHhAuth("resume_import_failed", {
         rid,
         message: safeAuthError(

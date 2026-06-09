@@ -15,12 +15,15 @@ import { fetchHhResumes, importHhResume } from "@/lib/api-client";
 import type { HhResumeChoice } from "@/lib/hh/resume-map";
 import { useAppStore } from "@/lib/store/use-app-store";
 
-type Outcome = "imported" | "choose" | "empty" | null;
+type Outcome = "imported" | "choose" | "empty" | "error" | null;
 
 function readOutcome(): Outcome {
   if (typeof window === "undefined") return null;
   const value = new URLSearchParams(window.location.search).get("hh");
-  return value === "imported" || value === "choose" || value === "empty"
+  return value === "imported" ||
+    value === "choose" ||
+    value === "empty" ||
+    value === "error"
     ? value
     : null;
 }
@@ -47,6 +50,12 @@ export function HhResumeImport() {
     } else if (outcome === "empty") {
       toast.info("В вашем аккаунте hh.ru нет резюме", {
         description: "Добавьте резюме на hh.ru или вставьте его текст ниже.",
+      });
+    } else if (outcome === "error") {
+      toast.error("hh.ru не дал доступ к резюме", {
+        description:
+          "hh.ru ограничил выгрузку резюме через API. Загрузите резюме файлом или вставьте текст ниже.",
+        duration: 8000,
       });
     } else if (outcome === "choose") {
       fetchHhResumes()
