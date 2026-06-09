@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { chatCompletion, extractJson, OpenRouterError } from "@/lib/ai/openrouter";
+import { chatCompletion, extractJson, AIError } from "@/lib/ai/client";
 import { buildResumeParseMessages } from "@/lib/ai/prompts";
 
 export const runtime = "nodejs";
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       experienceId,
     });
   } catch (err) {
-    const status = err instanceof OpenRouterError ? err.status : 500;
+    const status = err instanceof AIError ? err.status : 500;
     const message =
       err instanceof Error ? err.message : "Ошибка анализа резюме";
     return NextResponse.json({ error: message }, { status });

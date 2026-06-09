@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { StoreBootstrap } from "@/components/store-bootstrap";
 import { AuthCodeBridge } from "@/components/auth-code-bridge";
 import { PaywallDialog } from "@/components/paywall/paywall-dialog";
+import { LimitReachedDialog } from "@/components/paywall/limit-reached-dialog";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <StoreBootstrap />
         {children}
         <PaywallDialog />
+        <LimitReachedDialog />
         <Toaster richColors position="top-center" />
       </QueryClientProvider>
     </ThemeProvider>

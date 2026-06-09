@@ -7,7 +7,7 @@ Tinder для вакансий с hh.ru. Свайпайте вакансии, у
 
 - **Лента-свайпер** — карточки вакансий с hh.ru, свайп вправо (отклик) / влево (мимо),
   кнопки и стрелки клавиатуры.
-- **ИИ-совместимость** — для каждой вакансии модель `gpt-oss-120b:free` (OpenRouter)
+- **ИИ-совместимость** — для каждой вакансии модель `mistral-nemo` (Mistral через AITunnel)
   оценивает соответствие резюме в процентах, с плюсами и пробелами. Считается батчами
   и лениво, чтобы укладываться в бесплатный лимит.
 - **Личный кабинет** — загрузите резюме файлом **PDF или DOCX** (текст извлекается
@@ -34,7 +34,7 @@ Framer Motion · Zustand · TanStack Query · Supabase (Postgres) · unpdf + mam
 
 1. Ключи уже лежат в `.env.local`:
    ```
-   OPENROUTER_API_KEY=...
+   AITUNNEL_API_KEY=...
    HH_CLIENT_ID=...
    HH_CLIENT_SECRET=...
    SUPABASE_URL=...                 # проект Supabase
@@ -71,11 +71,11 @@ src/
     page.tsx              лента-свайпер
     liked/page.tsx        отклики + письма
     profile/page.tsx      личный кабинет
-    api/                  прокси к hh.ru и OpenRouter
+    api/                  прокси к hh.ru и AITunnel
   components/             карточки, колода, фильтры, диалог вакансии…
   lib/
     hh/                   клиент hh.ru, токен, форматирование, справочники
-    ai/                   клиент OpenRouter + промпты
+    ai/                   клиент AITunnel (Mistral) + промпты
     store/                Zustand-стор
     hooks/                загрузка вакансий, расчёт совместимости
 ```

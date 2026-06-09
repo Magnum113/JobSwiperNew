@@ -1,14 +1,12 @@
 import "server-only";
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+// AITunnel exposes an OpenAI-compatible chat/completions endpoint backed by
+// Mistral. We keep this thin fetch wrapper (instead of the OpenAI SDK) for the
+// retry/backoff + defensive JSON handling the app relies on.
+const AI_URL = "https://api.aitunnel.ru/v1/chat/completions";
 
-// gpt-oss-120b:free is the primary; the rest are free fallbacks OpenRouter
-// will try (in order) if the primary errors or is rate-limited.
-export const FREE_MODELS = [
-  "openai/gpt-oss-120b:free",
-  "openai/gpt-oss-20b:free",
-  "z-ai/glm-4.5-air:free",
-];
+// Mistral model served by AITunnel (~128k context). Override with AI_MODEL.
+export const DEFAULT_MODEL = process.env.AI_MODEL ?? "mistral-nemo";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -19,35 +17,35 @@ interface ChatOptions {
   messages: ChatMessage[];
   temperature?: number;
   maxTokens?: number;
-  models?: string[];
+  model?: string;
   signal?: AbortSignal;
 }
 
-export class OpenRouterError extends Error {
+export class AIError extends Error {
   constructor(
     message: string,
     readonly status: number,
   ) {
     super(message);
-    this.name = "OpenRouterError";
+    this.name = "AIError";
   }
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Calls the OpenRouter chat completions endpoint and returns the assistant text.
- * Handles the free-tier quirks: model fallback array, 429/503 retry with backoff,
- * and the case where OpenRouter returns HTTP 200 with an `error` body.
+ * Calls the AITunnel (Mistral) chat completions endpoint and returns the
+ * assistant text. Retries 429/503 with backoff and tolerates the case where the
+ * provider returns HTTP 200 with an `error` body.
  */
 export async function chatCompletion(opts: ChatOptions): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.AITUNNEL_API_KEY;
   if (!apiKey) {
-    throw new OpenRouterError("OPENROUTER_API_KEY не настроен на сервере", 500);
+    throw new AIError("AITUNNEL_API_KEY не настроен на сервере", 500);
   }
 
   const body = JSON.stringify({
-    models: opts.models ?? FREE_MODELS,
+    model: opts.model ?? DEFAULT_MODEL,
     messages: opts.messages,
     temperature: opts.temperature ?? 0.3,
     max_tokens: opts.maxTokens ?? 800,
@@ -58,13 +56,11 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const res = await fetch(OPENROUTER_URL, {
+      const res = await fetch(AI_URL, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://jobswiper.local",
-          "X-Title": "JobSwiper",
         },
         body,
         signal: opts.signal,
@@ -77,7 +73,7 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
         const wait = Number.isFinite(retryAfter) && retryAfter > 0
           ? retryAfter * 1000
           : 800 * 2 ** attempt + Math.random() * 300;
-        lastErr = new OpenRouterError("Сервис ИИ перегружен, повтор...", res.status);
+        lastErr = new AIError("Сервис ИИ перегружен, повтор...", res.status);
         if (attempt < maxAttempts - 1) {
           await sleep(Math.min(wait, 4000));
           continue;
@@ -89,12 +85,12 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
 
       if (!res.ok) {
         const msg =
-          json?.error?.message ?? `OpenRouter ответил ${res.status}`;
-        throw new OpenRouterError(msg, res.status);
+          json?.error?.message ?? `AITunnel ответил ${res.status}`;
+        throw new AIError(msg, res.status);
       }
-      // OpenRouter can return 200 with an error body.
+      // The endpoint can return 200 with an error body.
       if (json?.error) {
-        throw new OpenRouterError(
+        throw new AIError(
           json.error.message ?? "Ошибка ИИ-провайдера",
           json.error.code ?? 502,
         );
@@ -102,13 +98,13 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
 
       const content: string | undefined = json?.choices?.[0]?.message?.content;
       if (!content) {
-        throw new OpenRouterError("Пустой ответ от модели", 502);
+        throw new AIError("Пустой ответ от модели", 502);
       }
       return content;
     } catch (err) {
       lastErr = err;
-      // Network blips: retry; explicit OpenRouterError (non-429): rethrow.
-      if (err instanceof OpenRouterError) throw err;
+      // Network blips: retry; explicit AIError (non-429): rethrow.
+      if (err instanceof AIError) throw err;
       if (attempt < maxAttempts - 1) {
         await sleep(600 * 2 ** attempt);
         continue;
@@ -117,7 +113,7 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
   }
   throw lastErr instanceof Error
     ? lastErr
-    : new OpenRouterError("Не удалось получить ответ ИИ", 502);
+    : new AIError("Не удалось получить ответ ИИ", 502);
 }
 
 /**

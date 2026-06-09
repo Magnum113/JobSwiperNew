@@ -57,7 +57,7 @@ cookie-сессия). Яндекс пока остаётся не подключ
 Файл **`.env.local`** (читается только на сервере, в браузер не попадает):
 
 ```
-OPENROUTER_API_KEY=...         # ключ OpenRouter (ИИ)
+AITUNNEL_API_KEY=...           # ключ AITunnel (Mistral, ИИ)
 HH_CLIENT_ID=...               # OAuth-приложение hh.ru
 HH_CLIENT_SECRET=...           # секрет приложения hh.ru
 SUPABASE_URL=...               # URL проекта Supabase
@@ -98,7 +98,7 @@ src/
 │   ├── page.tsx              # ГЛАВНАЯ — лента-свайпер
 │   ├── liked/page.tsx        # ОТКЛИКИ — лайки + письма под свои вакансии
 │   ├── profile/page.tsx      # КАБИНЕТ — резюме, авторизация, тема
-│   └── api/                  # серверные роуты (прокси к hh.ru и OpenRouter)
+│   └── api/                  # серверные роуты (прокси к hh.ru и AITunnel)
 │       ├── vacancies/route.ts        # GET поиск вакансий
 │       ├── vacancies/[id]/route.ts   # GET детали вакансии
 │       ├── areas/route.ts            # GET регионы/города
@@ -140,7 +140,7 @@ src/
     │   ├── client.ts          # серверный клиент hh.ru (поиск/детали/регионы)
     │   └── token.ts           # менеджер app-токена hh.ru (кэш память+диск)
     ├── ai/
-    │   ├── openrouter.ts      # клиент OpenRouter + извлечение JSON
+    │   ├── client.ts          # клиент AITunnel (Mistral) + извлечение JSON
     │   └── prompts.ts         # сборка промптов (резюме/матч/письмо)
     ├── store/use-app-store.ts # Zustand-стор (зеркало БД, синхронизация)
     ├── supabase/
@@ -243,32 +243,26 @@ grant_type=client_credentials&client_id=...&client_secret=...
 
 ---
 
-## 6. Интеграция с OpenRouter (ИИ)
+## 6. Интеграция с AITunnel / Mistral (ИИ)
 
-Клиент: [`src/lib/ai/openrouter.ts`](src/lib/ai/openrouter.ts), промпты:
+Клиент: [`src/lib/ai/client.ts`](src/lib/ai/client.ts), промпты:
 [`src/lib/ai/prompts.ts`](src/lib/ai/prompts.ts).
 
-### Модель и фолбэки
+### Модель
 ```
-openai/gpt-oss-120b:free   ← основная (контекст 131K, бесплатная)
-openai/gpt-oss-20b:free    ← фолбэк
-z-ai/glm-4.5-air:free      ← фолбэк
+mistral-nemo   ← Mistral через AITunnel (контекст ~131K)
 ```
-Передаются массивом `models` — OpenRouter сам перебирает их при ошибке/перегрузе.
+Модель задаётся одним полем `model` (можно переопределить переменной `AI_MODEL`).
 
-Эндпоинт: `POST https://openrouter.ai/api/v1/chat/completions`, заголовки
-`Authorization: Bearer`, `Content-Type`, `HTTP-Referer`, `X-Title`.
+Эндпоинт: `POST https://api.aitunnel.ru/v1/chat/completions` (OpenAI-совместимый),
+заголовки `Authorization: Bearer ${AITUNNEL_API_KEY}`, `Content-Type`.
 
-### Лимиты бесплатного тарифа (важно для архитектуры!)
-- **20 запросов/мин** на все `:free` модели.
-- **50 запросов/день** при балансе < 10$ (или **1000/день** при ≥ 10$ кредитов).
-- Неуспешные запросы тоже расходуют дневной лимит.
-
-Из-за этого расчёт % сделан **батчами + лениво + с кэшем** (раздел 9).
+### Расход токенов
+Тариф платный, поэтому расчёт % сделан **батчами + лениво + с кэшем** (раздел 9),
+а каждая вакансия оценивается максимум один раз. Подробная экономика — в `PRICING.md`.
 
 ### JSON без `response_format`
-Бесплатная `gpt-oss-120b:free` **не поддерживает** `response_format`/structured
-outputs. Поэтому:
+Структурированный вывод не запрашиваем. Поэтому:
 - в промпте просим «верни ТОЛЬКО минифицированный JSON»;
 - ответ парсим **защитно** функцией `extractJson()`: пробуем `JSON.parse`, затем
   снимаем ```` ```json ```` обёртки, затем берём первый сбалансированный `{...}`/`[...]`.
@@ -276,7 +270,7 @@ outputs. Поэтому:
 ### Обработка ошибок
 - `429`/`503` → ретрай с экспоненциальным бэк-оффом (учитываем `Retry-After`),
   до 3 попыток.
-- OpenRouter может вернуть **HTTP 200 с телом `error`** — проверяем это.
+- Эндпоинт может вернуть **HTTP 200 с телом `error`** — проверяем это.
 - Текст ответа — `choices[0].message.content`.
 
 ### Температуры
@@ -405,7 +399,7 @@ RLS включён на всех таблицах. API-роуты теперь a
 
 Хук: [`src/lib/hooks/use-match-scores.ts`](src/lib/hooks/use-match-scores.ts).
 
-Задача: посчитать % для верха колоды, **не превышая лимит OpenRouter**.
+Задача: посчитать % для верха колоды, **экономя токены ИИ**.
 
 - **Окно** `WINDOW = 12`: оцениваем только ближайшие 12 неоценённых карточек.
 - **Батч** `BATCH_SIZE = 6`: за один запрос отправляем до 6 вакансий → 1 ответ-массив.
@@ -577,8 +571,8 @@ npx tsc --noEmit   # только проверка типов
    кнопок-ссылок, `items` у Select, `delay` у Tooltip (раздел 12).
 2. **hh.ru требует app-токен** — без него `403` с дата-центра. Токен кэшируется в
    Supabase (`app_tokens`); не запрашивать часто («refresh too early»).
-3. **Лимиты OpenRouter** (20/мин, 50/день) — поэтому % считается батчами/лениво/с
-   кэшем, а каждая вакансия оценивается максимум один раз.
+3. **Экономия токенов ИИ** (Mistral/AITunnel, платный тариф) — поэтому % считается
+   батчами/лениво/с кэшем, а каждая вакансия оценивается максимум один раз.
 4. **Бесплатная модель без `response_format`** — JSON парсим защитно (`extractJson`).
 5. **Пагинация hh.ru** — `page * per_page ≤ 2000`.
 6. **`/areas` весит 2.8 МБ** — `no-store` + кэш плоского списка в памяти.
@@ -589,7 +583,7 @@ npx tsc --noEmit   # только проверка типов
    только через серверные `/api/db/*` (раздел 8.1).
 9. **Google Auth:** использовать `@supabase/ssr`, `proxy.ts`, `getAll/setAll` cookies
    и verified `auth.getUser()`; не использовать deprecated auth-helpers.
-10. **Ключи только на сервере** — никогда не дёргать hh.ru/OpenRouter из браузера
+10. **Ключи только на сервере** — никогда не дёргать hh.ru/AITunnel из браузера
     напрямую.
 11. **HTML с hh.ru санитайзить** (DOMPurify), сниппеты чистить от `<highlighttext>`.
 12. **Next 16:** в route-хендлерах `params` — это `Promise` (`await params`).

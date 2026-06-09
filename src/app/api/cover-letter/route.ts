@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { chatCompletion, OpenRouterError } from "@/lib/ai/openrouter";
+import { chatCompletion, AIError } from "@/lib/ai/client";
 import { buildCoverLetterMessages } from "@/lib/ai/prompts";
 import { getVacancy } from "@/lib/hh/client";
 import { stripHtml } from "@/lib/hh/format";
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ text: text.trim() });
   } catch (err) {
-    const status = err instanceof OpenRouterError ? err.status : 500;
+    const status = err instanceof AIError ? err.status : 500;
     const message =
       err instanceof Error ? err.message : "Ошибка генерации письма";
     return NextResponse.json({ error: message }, { status });

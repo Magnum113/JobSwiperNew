@@ -57,6 +57,12 @@ export async function mergeAnonymousState(sourceUserId: string): Promise<void> {
   }
 }
 
+export interface QuotaUsage {
+  responsesUsed: number;
+  analysesUsed: number;
+  resumesUsed: number;
+}
+
 export interface RemoteState {
   profile: ResumeProfile | null;
   filters: Filters | null;
@@ -64,6 +70,8 @@ export interface RemoteState {
   matches: Record<string, MatchResult>;
   liked: Record<string, LikedItem>;
   customLetters: Record<string, CustomLetter>;
+  quota?: QuotaUsage;
+  bonusClaimed?: boolean;
 }
 
 async function send(method: "POST" | "PUT", path: string, body: unknown) {
@@ -160,4 +168,13 @@ export function removeCoverLetter(userId: string, id: string) {
 export function resetSwipesRemote(userId: string) {
   if (!userId) return;
   void send("POST", "/api/db/reset", { userId });
+}
+
+export function pushQuota(
+  userId: string,
+  quota: QuotaUsage,
+  bonusClaimed: boolean,
+) {
+  if (!userId) return;
+  void send("PUT", "/api/db/quota", { userId, quota, bonusClaimed });
 }

@@ -23,6 +23,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { useAppStore } from "@/lib/store/use-app-store";
+import { useLimits } from "@/lib/hooks/use-limits";
 import { postParseResume, postExtractResume } from "@/lib/api-client";
 import { EXPERIENCE_OPTIONS } from "@/lib/hh/dictionaries";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,9 @@ export function ResumeForm() {
   const profile = useAppStore((s) => s.profile);
   const setProfile = useAppStore((s) => s.setProfile);
   const clearProfile = useAppStore((s) => s.clearProfile);
+  const consumeResume = useAppStore((s) => s.consumeResume);
+  const openLimitDialog = useAppStore((s) => s.openLimitDialog);
+  const { remaining } = useLimits();
 
   const hasProfile = hydrated && !!profile;
   const [editing, setEditing] = useState(false);
@@ -56,9 +60,14 @@ export function ResumeForm() {
       });
       return;
     }
+    if (remaining.resumes <= 0) {
+      openLimitDialog("resumes");
+      return;
+    }
     setAnalyzing(true);
     try {
       const parsed = await postParseResume(value);
+      consumeResume();
       setProfile({
         rawText: value,
         title: parsed.title,

@@ -31,10 +31,12 @@ interface TopCardProps {
   matchLoading?: boolean;
   onDetails: () => void;
   onSwipe: (vacancy: HHVacancyItem, dir: SwipeDirection) => void;
+  canSwipeRight?: () => boolean;
+  onBlockedRight?: () => void;
 }
 
 const TopCard = forwardRef<TopCardHandle, TopCardProps>(function TopCard(
-  { vacancy, match, matchLoading, onDetails, onSwipe },
+  { vacancy, match, matchLoading, onDetails, onSwipe, canSwipeRight, onBlockedRight },
   ref,
 ) {
   const x = useMotionValue(0);
@@ -61,6 +63,13 @@ const TopCard = forwardRef<TopCardHandle, TopCardProps>(function TopCard(
 
   const swipe = (dir: SwipeDirection) => {
     if (leaving.current) return;
+    // Gate "отклик" (right) when the user is out of response quota: snap the
+    // card back instead of flying it off, and surface the limit popup.
+    if (dir === "right" && canSwipeRight && !canSwipeRight()) {
+      onBlockedRight?.();
+      animate(x, 0, { type: "spring", stiffness: 320, damping: 26 });
+      return;
+    }
     leaving.current = true;
     const target = dir === "right" ? 800 : -800;
     animate(x, target, {
@@ -132,6 +141,8 @@ interface SwipeDeckProps {
   loadingIds: Set<string>;
   onSwipe: (vacancy: HHVacancyItem, dir: SwipeDirection) => void;
   onDetails: (vacancy: HHVacancyItem) => void;
+  canSwipeRight?: () => boolean;
+  onBlockedRight?: () => void;
 }
 
 export function SwipeDeck({
@@ -140,6 +151,8 @@ export function SwipeDeck({
   loadingIds,
   onSwipe,
   onDetails,
+  canSwipeRight,
+  onBlockedRight,
 }: SwipeDeckProps) {
   const topRef = useRef<TopCardHandle>(null);
   const top = items[0];
@@ -202,6 +215,8 @@ export function SwipeDeck({
               matchLoading={loadingIds.has(top.id)}
               onDetails={() => onDetails(top)}
               onSwipe={onSwipe}
+              canSwipeRight={canSwipeRight}
+              onBlockedRight={onBlockedRight}
             />
           </div>
         )}

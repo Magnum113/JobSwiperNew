@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { useVacancies } from "@/lib/hooks/use-vacancies";
 import { useMatchScores } from "@/lib/hooks/use-match-scores";
+import { useLimits } from "@/lib/hooks/use-limits";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { buildResumeContext } from "@/lib/resume";
 import { generateCoverLetter } from "@/lib/cover-letter";
@@ -45,6 +46,9 @@ export default function HomePage() {
   const like = useAppStore((s) => s.like);
   const pass = useAppStore((s) => s.pass);
   const resetSwipes = useAppStore((s) => s.resetSwipes);
+  const consumeResponse = useAppStore((s) => s.consumeResponse);
+  const openLimitDialog = useAppStore((s) => s.openLimitDialog);
+  const { remaining } = useLimits();
 
   const enabled = hydrated && !!profile;
 
@@ -105,6 +109,11 @@ export default function HomePage() {
 
   const handleSwipe = (vacancy: HHVacancyItem, dir: SwipeDirection) => {
     if (dir === "right") {
+      if (remaining.responses <= 0) {
+        openLimitDialog("responses");
+        return;
+      }
+      consumeResponse();
       like(vacancy, matches[vacancy.id]);
       generateCoverLetter(vacancy.id);
       toast.success("Добавлено в отклики", {
@@ -189,6 +198,8 @@ export default function HomePage() {
         loadingIds={loadingIds}
         onSwipe={handleSwipe}
         onDetails={openDetails}
+        canSwipeRight={() => remaining.responses > 0}
+        onBlockedRight={() => openLimitDialog("responses")}
       />
     );
   }

@@ -1,4 +1,4 @@
-import type { ChatMessage } from "./openrouter";
+import type { ChatMessage } from "./client";
 
 export function truncate(text: string, max: number): string {
   if (!text) return "";

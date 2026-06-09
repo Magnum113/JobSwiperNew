@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { postMatch } from "@/lib/api-client";
 import { pushMatches } from "@/lib/db-sync";
 import { useAppStore } from "@/lib/store/use-app-store";
+import { getFreeLimits } from "@/lib/plans";
 import type { HHVacancyItem } from "@/lib/hh/types";
 import type { MatchResult } from "@/lib/types";
 
@@ -11,7 +12,7 @@ const WINDOW = 12; // only pre-score the cards the user is about to reach
 
 /**
  * Lazily computes AI match scores for the top of the deck, one batch at a time
- * (to respect OpenRouter's free-tier rate limit), caching results in the store.
+ * (to keep token usage and rate limits in check), caching results in the store.
  * Each vacancy is attempted at most once per resume to avoid burning quota.
  */
 export function useMatchScores(
@@ -49,6 +50,12 @@ export function useMatchScores(
     if (!enabled || !resumeContext) return;
     if (st.inFlight.size > 0) return; // one batch at a time
 
+    // Stop scoring once the account's analysis quota is used up.
+    const { quota, proBonusClaimed, consumeAnalyses } = useAppStore.getState();
+    const analysesLeft =
+      getFreeLimits(proBonusClaimed).analyses - quota.analysesUsed;
+    if (analysesLeft <= 0) return;
+
     const pending = itemsRef.current
       .slice(0, WINDOW)
       .filter(
@@ -57,7 +64,7 @@ export function useMatchScores(
           !st.attempted.has(v.id) &&
           !st.inFlight.has(v.id),
       )
-      .slice(0, BATCH_SIZE);
+      .slice(0, Math.min(BATCH_SIZE, analysesLeft));
 
     if (pending.length === 0) return;
 
@@ -81,7 +88,11 @@ export function useMatchScores(
             if (vac) toPersist.push({ vacancy: vac, match: m });
           }
         }
-        if (Object.keys(entries).length) setMatches(entries);
+        const scored = Object.keys(entries).length;
+        if (scored) {
+          setMatches(entries);
+          consumeAnalyses(scored); // count successful analyses against quota
+        }
         pushMatches(userId, toPersist);
       })
       .catch(() => {

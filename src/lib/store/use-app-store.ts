@@ -19,6 +19,7 @@ import {
   pushCoverLetter,
   removeCoverLetter,
   resetSwipesRemote,
+  pushQuota,
 } from "@/lib/db-sync";
 
 export const DEFAULT_FILTERS: Filters = {
@@ -95,27 +96,32 @@ interface AppState {
   /** One-time "we gifted you responses" bonus, persisted in localStorage. */
   proBonusClaimed: boolean;
   claimProBonus: () => void;
+
+  /** Usage counters against the free-plan limits (persisted in localStorage). */
+  quota: QuotaUsage;
+  consumeResponse: () => void;
+  consumeAnalyses: (n: number) => void;
+  consumeResume: () => void;
+
+  /** "Лимит исчерпан" popup that funnels into the paywall. */
+  limitDialogKind: LimitKind | null;
+  openLimitDialog: (kind: LimitKind) => void;
+  closeLimitDialog: () => void;
 }
 
-const BONUS_KEY = "jobswiper-pro-bonus";
+export type LimitKind = "responses" | "analyses" | "resumes";
 
-function readBonusClaimed(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return localStorage.getItem(BONUS_KEY) === "1";
-  } catch {
-    return false;
-  }
+interface QuotaUsage {
+  responsesUsed: number;
+  analysesUsed: number;
+  resumesUsed: number;
 }
 
-function writeBonusClaimed(): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(BONUS_KEY, "1");
-  } catch {
-    // ignore — non-critical
-  }
-}
+const EMPTY_QUOTA: QuotaUsage = {
+  responsesUsed: 0,
+  analysesUsed: 0,
+  resumesUsed: 0,
+};
 
 export const useAppStore = create<AppState>()((set, get) => ({
   userId: "",
@@ -139,6 +145,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
       matches: s.matches ?? {},
       liked: s.liked ?? {},
       customLetters: s.customLetters ?? {},
+      quota: s.quota ?? EMPTY_QUOTA,
+      proBonusClaimed: s.bonusClaimed ?? false,
     }),
 
   profile: null,
@@ -289,9 +297,43 @@ export const useAppStore = create<AppState>()((set, get) => ({
   openPaywall: (source) =>
     set({ paywallOpen: true, paywallSource: source ?? null }),
   closePaywall: () => set({ paywallOpen: false }),
-  proBonusClaimed: readBonusClaimed(),
+  proBonusClaimed: false,
   claimProBonus: () => {
-    writeBonusClaimed();
     set({ proBonusClaimed: true });
+    pushQuota(get().userId, get().quota, true);
   },
+
+  quota: EMPTY_QUOTA,
+  consumeResponse: () => {
+    set((state) => ({
+      quota: {
+        ...state.quota,
+        responsesUsed: state.quota.responsesUsed + 1,
+      },
+    }));
+    pushQuota(get().userId, get().quota, get().proBonusClaimed);
+  },
+  consumeAnalyses: (n) => {
+    if (n <= 0) return;
+    set((state) => ({
+      quota: {
+        ...state.quota,
+        analysesUsed: state.quota.analysesUsed + n,
+      },
+    }));
+    pushQuota(get().userId, get().quota, get().proBonusClaimed);
+  },
+  consumeResume: () => {
+    set((state) => ({
+      quota: {
+        ...state.quota,
+        resumesUsed: state.quota.resumesUsed + 1,
+      },
+    }));
+    pushQuota(get().userId, get().quota, get().proBonusClaimed);
+  },
+
+  limitDialogKind: null,
+  openLimitDialog: (kind) => set({ limitDialogKind: kind }),
+  closeLimitDialog: () => set({ limitDialogKind: null }),
 }));

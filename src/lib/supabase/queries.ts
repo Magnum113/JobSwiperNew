@@ -141,6 +141,22 @@ export async function mergeUsers(
     if (!targetFilters && sourceFilters) {
       patch.filters = source.filters;
     }
+
+    // Quota: keep the higher usage so switching devices can't reset limits;
+    // the bonus counts as claimed if it was claimed on either account.
+    patch.responses_used = Math.max(
+      Number(source.responses_used) || 0,
+      Number(target.responses_used) || 0,
+    );
+    patch.analyses_used = Math.max(
+      Number(source.analyses_used) || 0,
+      Number(target.analyses_used) || 0,
+    );
+    patch.resumes_used = Math.max(
+      Number(source.resumes_used) || 0,
+      Number(target.resumes_used) || 0,
+    );
+    patch.bonus_claimed = Boolean(source.bonus_claimed) || Boolean(target.bonus_claimed);
   }
   if (Object.keys(patch).length > 0) {
     const { error } = await sb.from("users").update(patch).eq("id", targetUserId);
@@ -339,6 +355,12 @@ export async function removeCoverLetter(
 
 /* ------------------------------ load full state --------------------------- */
 
+export interface QuotaUsage {
+  responsesUsed: number;
+  analysesUsed: number;
+  resumesUsed: number;
+}
+
 export interface LoadedState {
   profile: ResumeProfile | null;
   filters: Filters | null;
@@ -346,6 +368,28 @@ export interface LoadedState {
   matches: Record<string, MatchResult>;
   liked: Record<string, LikedItem>;
   customLetters: Record<string, CustomLetter>;
+  quota: QuotaUsage;
+  bonusClaimed: boolean;
+}
+
+/** Persist usage counters + bonus flag on the user's account row. */
+export async function saveQuota(
+  userId: string,
+  quota: QuotaUsage,
+  bonusClaimed: boolean,
+): Promise<void> {
+  const sb = getSupabase();
+  await ensureUser(userId);
+  const { error } = await sb
+    .from("users")
+    .update({
+      responses_used: Math.max(0, Math.round(quota.responsesUsed)),
+      analyses_used: Math.max(0, Math.round(quota.analysesUsed)),
+      resumes_used: Math.max(0, Math.round(quota.resumesUsed)),
+      bonus_claimed: bonusClaimed,
+    })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
 }
 
 export async function loadState(userId: string): Promise<LoadedState> {
@@ -442,5 +486,21 @@ export async function loadState(userId: string): Promise<LoadedState> {
     }
   }
 
-  return { profile, filters, seen, matches, liked, customLetters };
+  const quota: QuotaUsage = {
+    responsesUsed: Number(u?.responses_used) || 0,
+    analysesUsed: Number(u?.analyses_used) || 0,
+    resumesUsed: Number(u?.resumes_used) || 0,
+  };
+  const bonusClaimed = Boolean(u?.bonus_claimed);
+
+  return {
+    profile,
+    filters,
+    seen,
+    matches,
+    liked,
+    customLetters,
+    quota,
+    bonusClaimed,
+  };
 }

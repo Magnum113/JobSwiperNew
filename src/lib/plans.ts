@@ -25,6 +25,24 @@ export const FREE_LIMITS = {
   analyses: 30,
 } as const;
 
+/** One-time bonus granted from the paywall while payments are being wired up. */
+export const BONUS_RESPONSES = 50;
+
+export interface Limits {
+  responses: number;
+  analyses: number;
+  resumes: number;
+}
+
+/** Effective limits for a free user (plus the gifted responses, once claimed). */
+export function getFreeLimits(bonusClaimed: boolean): Limits {
+  return {
+    responses: FREE_LIMITS.responses + (bonusClaimed ? BONUS_RESPONSES : 0),
+    analyses: FREE_LIMITS.analyses,
+    resumes: FREE_LIMITS.resumes,
+  };
+}
+
 export const PLANS: Plan[] = [
   {
     id: "week",
