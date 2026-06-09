@@ -133,7 +133,8 @@ src/
 │   ├── layout/bottom-nav.tsx # плавающая нижняя навигация (3 вкладки + бейдж)
 │   ├── swipe/
 │   │   ├── swipe-deck.tsx     # колода: drag, штампы LIKE/NOPE, кнопки, стрелки
-│   │   └── swipe-card.tsx     # визуал карточки вакансии
+│   │   ├── swipe-card.tsx     # визуал карточки вакансии
+│   │   └── deck-refill-banner.tsx # CTA над колодой (загрузить ещё/Pro/фильтры)
 │   ├── vacancy/vacancy-detail-dialog.tsx  # модалка с полным описанием (ленивый fetch)
 │   ├── filters/
 │   │   ├── filters-sheet.tsx  # панель фильтров (Sheet снизу)
@@ -168,6 +169,8 @@ src/
     │   ├── server.ts          # серверный клиент Supabase (publishable-ключ)
     │   └── queries.ts         # слой запросов к БД (загрузка/сохранение/merge)
     ├── db-sync.ts             # браузерные обёртки к /api/db/* + auth/session bootstrap
+    ├── deck-supply.ts         # чистая логика догрузки ленты + выбор CTA (раздел 9.1)
+    ├── deck-supply.test.ts    # юнит-тесты deck-supply (node --test)
     ├── analytics.ts           # Yandex Metrika counter + reachGoal helper
     ├── plans.ts               # бесплатные лимиты, тарифы, бонус +50 откликов
     ├── site-url.ts            # production/dev origin для OAuth redirectTo
@@ -712,9 +715,11 @@ shadcn-стиль **`base-nova`** генерирует компоненты на
             └─ store.setProfile ─→ filters.text = profession
 
 Главная
-  └─ useVacancies(filters) ─→ /api/vacancies ─(hh.ru, app-token)→ items[]
-       ├─ deckItems = items − seen
-       └─ useMatchScores(top 12, батчи по 6) ─→ /api/match ─(ИИ)→ store.matches
+  └─ useVacancies(filters) ─→ /api/vacancies ─(hh.ru, app-token)→ items[] (страницы по 30)
+       ├─ deckItems = items − seen (API-порядок) ─→ sortedItems (по убыванию %)
+       ├─ useMatchScores(top 12, батчи по 6) ─→ /api/match ─(ИИ)→ store.matches
+       └─ deck-supply: countSupply → decidePrefetch → fetchNextPage / banner (раздел 9.1)
+            держим запас оценённых годных карточек; CTA, когда годные кончились
 
 Свайп вправо
   └─ store.like(v) + generateCoverLetter(id)
@@ -749,9 +754,13 @@ npm run build      # production-сборка (включает проверку 
 npm start          # запуск собранного
 npm run lint       # ESLint
 npx tsc --noEmit   # только проверка типов
+node --test src/lib/deck-supply.test.ts   # юнит-тесты логики ленты (Node 24, TS «из коробки»)
 ```
 
 `.claude/launch.json` описывает дев-сервер для интегрированного превью.
+
+> Тестовый файл использует `.ts`-импорты для нативного раннера Node 24, поэтому в
+> `tsconfig.json` включён `allowImportingTsExtensions: true` (безопасно при `noEmit`).
 
 ---
 
@@ -784,6 +793,10 @@ npx tsc --noEmit   # только проверка типов
     напрямую.
 14. **HTML с hh.ru санитайзить** (DOMPurify), сниппеты чистить от `<highlighttext>`.
 15. **Next 16:** в route-хендлерах `params` — это `Promise` (`await params`).
+16. **Подгрузка ленты — «скользящий запас подходящих»** (раздел 9.1): hh-страницы
+    тянем проактивно (бесплатно), скоринг — чуть впереди свайпов и в рамках квоты;
+    решающая логика в чистом [`deck-supply.ts`](src/lib/deck-supply.ts) (есть тесты).
+    Менять пороги (`USABLE_SCORE/READY_MIN/BACKLOG_CAP/AUTO_PAGE_BUDGET`) там же.
 
 ---
 
