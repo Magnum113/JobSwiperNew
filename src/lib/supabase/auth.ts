@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { readAppSessionUser } from "@/lib/auth/app-session";
 import { getSupabasePublishableKey, getSupabaseUrl } from "./server";
 
 export async function createSupabaseAuthClient() {
@@ -29,7 +30,10 @@ export async function getAuthenticatedUserId(): Promise<string | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  if (user?.id) return user.id;
+
+  const appSessionUser = await readAppSessionUser();
+  return appSessionUser?.id ?? null;
 }
 
 export async function resolveRequestUserId(

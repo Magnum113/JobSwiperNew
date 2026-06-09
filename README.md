@@ -40,11 +40,15 @@ Framer Motion · Zustand · TanStack Query · Supabase (Postgres) · unpdf + mam
    SUPABASE_URL=...                 # проект Supabase
    SUPABASE_PUBLISHABLE_KEY=...     # publishable-ключ (используется только на сервере)
    NEXT_PUBLIC_SITE_URL=https://jobswiper.ru  # production URL для OAuth callback
+   YANDEX_CLIENT_ID=...             # OAuth Client ID приложения Яндекс ID
+   APP_SESSION_SECRET=...           # секрет HMAC для signed cookie Яндекс-сессии
    ```
    В Google OAuth должен быть разрешён Supabase callback
    `https://<project-ref>.supabase.co/auth/v1/callback`, а в Supabase Auth Redirect
    URLs — `http://localhost:3000/auth/callback` для dev и
-   `https://jobswiper.ru/auth/callback` для production.
+   `https://jobswiper.ru/auth/callback` для production. В приложении Яндекс ID
+   должен быть Redirect URI `https://jobswiper.ru/api/auth/yandex/callback`
+   (`http://localhost:3000/api/auth/yandex/callback` для локальной проверки).
 2. Установка и старт:
    ```bash
    npm install

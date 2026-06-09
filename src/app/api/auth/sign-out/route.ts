@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clearAppSessionCookie } from "@/lib/auth/app-session";
 import { createSupabaseAuthClient } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
@@ -6,7 +7,7 @@ export const runtime = "nodejs";
 export async function POST() {
   const supabase = await createSupabaseAuthClient();
   await supabase.auth.signOut();
-  return NextResponse.json(
+  const response = NextResponse.json(
     { ok: true },
     {
       headers: {
@@ -14,4 +15,6 @@ export async function POST() {
       },
     },
   );
+  clearAppSessionCookie(response);
+  return response;
 }

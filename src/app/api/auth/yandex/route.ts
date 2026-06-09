@@ -1,45 +1,65 @@
-import { NextResponse } from "next/server";
-import { createSupabaseAuthClient } from "@/lib/supabase/auth";
+import { createHash, randomBytes } from "crypto";
+import {
+  getYandexClientId,
+  getYandexScope,
+  logYandexAuth,
+  redirectNoStore,
+  safeNextPath,
+  setYandexTempCookie,
+  YANDEX_AUTH_NEXT_COOKIE,
+  YANDEX_AUTH_STATE_COOKIE,
+  YANDEX_AUTH_VERIFIER_COOKIE,
+} from "@/lib/auth/yandex";
 import { getAppOrigin } from "@/lib/site-url";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-function redirectNoStore(url: string | URL) {
-  const response = NextResponse.redirect(url);
-  response.headers.set("Cache-Control", "private, no-store");
-  return response;
+function base64Url(input: Buffer): string {
+  return input
+    .toString("base64")
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
 }
 
-function getYandexProvider(): `custom:${string}` {
-  const configured = process.env.SUPABASE_YANDEX_PROVIDER_ID?.trim();
-  if (!configured) return "custom:yandex";
-  return configured.startsWith("custom:")
-    ? (configured as `custom:${string}`)
-    : `custom:${configured}`;
+function createCodeVerifier(): string {
+  return base64Url(randomBytes(48));
+}
+
+function createCodeChallenge(verifier: string): string {
+  return base64Url(createHash("sha256").update(verifier).digest());
 }
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const appOrigin = getAppOrigin(req);
-  const next = url.searchParams.get("next") || "/profile";
-  const redirectTo = new URL("/auth/callback", appOrigin);
-  redirectTo.searchParams.set("next", next);
-  redirectTo.searchParams.set("provider", "yandex");
+  const next = safeNextPath(url.searchParams.get("next"));
+  const redirectUri = new URL("/api/auth/yandex/callback", appOrigin);
+  const state = base64Url(randomBytes(32));
+  const verifier = createCodeVerifier();
+  const authorizeUrl = new URL("https://oauth.yandex.ru/authorize");
 
-  const supabase = await createSupabaseAuthClient();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: getYandexProvider(),
-    options: {
-      redirectTo: redirectTo.toString(),
-    },
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("client_id", getYandexClientId());
+  authorizeUrl.searchParams.set("redirect_uri", redirectUri.toString());
+  authorizeUrl.searchParams.set("state", state);
+  authorizeUrl.searchParams.set("code_challenge", createCodeChallenge(verifier));
+  authorizeUrl.searchParams.set("code_challenge_method", "S256");
+
+  const scope = getYandexScope();
+  if (scope) authorizeUrl.searchParams.set("scope", scope);
+
+  const response = redirectNoStore(authorizeUrl);
+  setYandexTempCookie(response, YANDEX_AUTH_STATE_COOKIE, state);
+  setYandexTempCookie(response, YANDEX_AUTH_VERIFIER_COOKIE, verifier);
+  setYandexTempCookie(response, YANDEX_AUTH_NEXT_COOKIE, next);
+
+  logYandexAuth("start", {
+    next,
+    redirectUri: redirectUri.toString(),
+    hasScopeOverride: Boolean(scope),
   });
 
-  if (error || !data.url) {
-    const fallback = new URL("/profile", appOrigin);
-    fallback.searchParams.set("auth", "error");
-    fallback.searchParams.set("provider", "yandex");
-    return redirectNoStore(fallback);
-  }
-
-  return redirectNoStore(data.url);
+  return response;
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
+import { readAppSessionUser } from "@/lib/auth/app-session";
 import { createSupabaseAuthClient } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
@@ -57,6 +58,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   const identityData = user ? firstIdentityData(user) : {};
+  const appSessionUser = user ? null : await readAppSessionUser();
 
   return NextResponse.json(
     {
@@ -80,7 +82,7 @@ export async function GET() {
                 identityAvatarUrl(identityData),
               ]) ?? null,
           }
-        : null,
+        : appSessionUser,
     },
     {
       headers: {

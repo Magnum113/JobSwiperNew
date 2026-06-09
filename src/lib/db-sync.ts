@@ -31,6 +31,7 @@ export interface AuthUser {
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
+  provider?: "google" | "yandex";
 }
 
 export async function getAuthUser(): Promise<AuthUser | null> {
