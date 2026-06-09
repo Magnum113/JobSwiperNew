@@ -12,6 +12,7 @@ import { BrandMark } from "@/components/brand";
 import { ProButton } from "@/components/paywall/pro-button";
 import { FiltersSheet } from "@/components/filters/filters-sheet";
 import { SwipeDeck } from "@/components/swipe/swipe-deck";
+import { DeckRefillBanner } from "@/components/swipe/deck-refill-banner";
 import { VacancyDetailDialog } from "@/components/vacancy/vacancy-detail-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,13 @@ import { useAppStore } from "@/lib/store/use-app-store";
 import { buildResumeContext } from "@/lib/resume";
 import { generateCoverLetter } from "@/lib/cover-letter";
 import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
+import {
+  countSupply,
+  decidePrefetch,
+  pickRefillVariant,
+  AUTO_PAGE_BUDGET,
+  type RefillVariant,
+} from "@/lib/deck-supply";
 import type { HHVacancyItem } from "@/lib/hh/types";
 import type { SwipeDirection } from "@/lib/types";
 
@@ -49,6 +57,7 @@ export default function HomePage() {
   const resetSwipes = useAppStore((s) => s.resetSwipes);
   const consumeResponse = useAppStore((s) => s.consumeResponse);
   const openLimitDialog = useAppStore((s) => s.openLimitDialog);
+  const openPaywall = useAppStore((s) => s.openPaywall);
   const { remaining } = useLimits();
   const feedLoadedKeyRef = useRef<string | null>(null);
   const feedErrorKeyRef = useRef<string | null>(null);
@@ -100,12 +109,87 @@ export default function HomePage() {
       .map((x) => x.v);
   }, [deckItems, matches]);
 
-  // Keep the deck stocked.
+  // Supply counts that drive prefetch + the refill banner.
+  const counts = useMemo(
+    () => countSupply(deckItems, matches),
+    [deckItems, matches],
+  );
+
+  const canScoreMore = remaining.analyses > 0;
+
+  // Bounded "blind search": how many pages we auto-fetched without producing a
+  // new usable match. Reset whenever the usable supply grows (search working),
+  // filters change, or the user explicitly asks for more.
+  const autoBudgetRef = useRef(0);
+  const prevUsableRef = useRef(0);
+  const [autoExhausted, setAutoExhausted] = useState(false);
+
   useEffect(() => {
-    if (deckItems.length <= 6 && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+    if (counts.usableReady > prevUsableRef.current) {
+      autoBudgetRef.current = 0;
+      setAutoExhausted(false);
     }
-  }, [deckItems.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+    prevUsableRef.current = counts.usableReady;
+  }, [counts.usableReady]);
+
+  // Fresh filters → fresh search budget.
+  useEffect(() => {
+    autoBudgetRef.current = 0;
+    setAutoExhausted(false);
+  }, [filters]);
+
+  // Keep the deck stocked with scored, usable matches.
+  useEffect(() => {
+    const decision = decidePrefetch({
+      counts,
+      deckLength: deckItems.length,
+      canScoreMore,
+      hasNextPage,
+      isFetchingNextPage,
+      budgetUsed: autoBudgetRef.current,
+    });
+    if (decision.fetch) {
+      if (decision.consumeBudget) autoBudgetRef.current += 1;
+      fetchNextPage();
+    } else if (decision.exhaustBudget) {
+      setAutoExhausted(true); // tried enough pages; hand control to the user
+    }
+  }, [
+    deckItems.length,
+    counts,
+    canScoreMore,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
+
+  const handleLoadMore = () => {
+    autoBudgetRef.current = 0;
+    setAutoExhausted(false);
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  };
+
+  // Which refill CTA (if any) to show above the deck.
+  const refillVariant: RefillVariant | null = useMemo(() => {
+    const top = sortedItems[0];
+    return pickRefillVariant({
+      hasTop: !!top,
+      topScore: top ? matches[top.id]?.score : undefined,
+      isFetchingNextPage,
+      scoring: loadingIds.size > 0,
+      hasNextPage,
+      canScoreMore,
+      autoExhausted,
+    });
+  }, [
+    sortedItems,
+    matches,
+    isFetchingNextPage,
+    loadingIds,
+    hasNextPage,
+    canScoreMore,
+    autoExhausted,
+  ]);
 
   useEffect(() => {
     if (!enabled || isLoading || isError) return;
@@ -252,15 +336,27 @@ export default function HomePage() {
     );
   } else {
     body = (
-      <SwipeDeck
-        items={sortedItems}
-        matches={matches}
-        loadingIds={loadingIds}
-        onSwipe={handleSwipe}
-        onDetails={openDetails}
-        canSwipeRight={() => remaining.responses > 0}
-        onBlockedRight={() => openLimitDialog("responses")}
-      />
+      <div className="flex w-full flex-col gap-4">
+        {refillVariant && (
+          <DeckRefillBanner
+            variant={refillVariant}
+            weakRemaining={deckItems.length}
+            loading={isFetchingNextPage}
+            onLoadMore={handleLoadMore}
+            onReset={() => resetSwipes()}
+            onPro={() => openPaywall("feed-refill")}
+          />
+        )}
+        <SwipeDeck
+          items={sortedItems}
+          matches={matches}
+          loadingIds={loadingIds}
+          onSwipe={handleSwipe}
+          onDetails={openDetails}
+          canSwipeRight={() => remaining.responses > 0}
+          onBlockedRight={() => openLimitDialog("responses")}
+        />
+      </div>
     );
   }
 
@@ -288,6 +384,7 @@ export default function HomePage() {
                 вакансий
                 {filters.text ? ` по запросу «${filters.text}»` : ""}
                 {isFetchingNextPage && " · подгружаем ещё…"}
+                {loadingIds.size > 0 && " · оцениваем совместимость…"}
               </>
             )}
           </p>

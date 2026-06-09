@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { getAuthUser } from "@/lib/db-sync";
 import { useAppStore } from "@/lib/store/use-app-store";
 
 function GoogleIcon() {
@@ -32,10 +33,17 @@ function YandexIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
       <circle cx="12" cy="12" r="11" fill="#FC3F1D" />
-      <path
+      <text
         fill="#fff"
-        d="M13.3 6.4h-1.2c-1.9 0-3 1-3 2.7 0 1.4.6 2.1 1.9 3l1 .7-2.9 4.4H9l2.6-3.9c-1.5-.8-2.4-1.7-2.4-3.6 0-2.4 1.6-3.9 4.1-3.9h2v11.4h-1.6V6.4Z"
-      />
+        x="12"
+        y="17"
+        textAnchor="middle"
+        fontFamily="Arial, Helvetica, sans-serif"
+        fontSize="15"
+        fontWeight="700"
+      >
+        Я
+      </text>
     </svg>
   );
 }
@@ -45,20 +53,40 @@ export function AuthButtons() {
   const user = useAppStore((s) => s.authUser);
   const authChecked = useAppStore((s) => s.authChecked);
   const setAuthUser = useAppStore((s) => s.setAuthUser);
+  const setAuthChecked = useAppStore((s) => s.setAuthChecked);
 
   useEffect(() => {
+    let cancelled = false;
     const params = new URLSearchParams(window.location.search);
     const auth = params.get("auth");
     const provider = params.get("provider");
+    const authError = params.get("auth_error");
     const providerName = provider === "yandex" ? "Яндекс" : "Google";
     if (auth === "success") {
       toast.success(`Вы вошли через ${providerName}`);
+      getAuthUser().then((freshUser) => {
+        if (cancelled) return;
+        setAuthUser(freshUser);
+        setAuthChecked(true);
+        if (!freshUser) {
+          toast.error(
+            "Вход прошёл, но сессия аккаунта не появилась. Попробуйте войти ещё раз.",
+          );
+        }
+      });
       window.history.replaceState(null, "", window.location.pathname);
     } else if (auth === "error") {
-      toast.error(`Не удалось войти через ${providerName}`);
+      toast.error(
+        authError
+          ? `Не удалось войти через ${providerName}: ${authError}`
+          : `Не удалось войти через ${providerName}`,
+      );
       window.history.replaceState(null, "", window.location.pathname);
     }
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [setAuthChecked, setAuthUser]);
 
   const signInWithGoogle = () => {
     window.location.assign("/api/auth/google?next=/profile");

@@ -19,8 +19,9 @@
 7. Дополнительно: можно вставить текст **произвольной вакансии** (не из hh.ru) и
    получить под неё письмо.
 
-Авторизация через Google реализована на Supabase Auth (`@supabase/ssr`, PKCE,
-cookie-сессия). Яндекс пока остаётся не подключённым.
+Авторизация через Google и Яндекс реализована на Supabase Auth (`@supabase/ssr`,
+PKCE, cookie-сессия). Google подключён как встроенный провайдер Supabase, Яндекс —
+как custom OAuth provider (`custom:yandex`).
 
 ---
 
@@ -35,8 +36,9 @@ cookie-сессия). Яндекс пока остаётся не подключ
 | Компоненты | **shadcn/ui (стиль `base-nova`)** на **Base UI** (`@base-ui/react`) | доступные примитивы |
 | Анимации/свайпы | **motion** (Framer Motion v12) | drag-жесты колоды |
 | Стейт | **Zustand** | клиентское состояние (зеркало БД в памяти) |
-| База данных | **Supabase** (Postgres) + `@supabase/supabase-js` + `@supabase/ssr` | хранение данных и Google Auth |
+| База данных | **Supabase** (Postgres) + `@supabase/supabase-js` + `@supabase/ssr` | хранение данных и Auth через Google/Яндекс |
 | Данные/кэш | **TanStack Query** (`@tanstack/react-query`) | загрузка вакансий с hh.ru, кэш |
+| Аналитика | **Yandex Metrika** | счётчик, Webvisor, цели продукта |
 | Тема | **next-themes** | светлая/тёмная тема |
 | Тосты | **sonner** | уведомления |
 | Поиск-комбобокс | **cmdk** | поиск по 14k городов |
@@ -63,20 +65,36 @@ HH_CLIENT_SECRET=...           # секрет приложения hh.ru
 SUPABASE_URL=...               # URL проекта Supabase
 SUPABASE_PUBLISHABLE_KEY=...   # publishable-ключ (используется только серверно)
 NEXT_PUBLIC_SITE_URL=https://jobswiper.ru  # production URL для OAuth callback
+SUPABASE_YANDEX_PROVIDER_ID=custom:yandex  # опционально; id custom provider в Supabase
 ```
 
-Для Google OAuth:
+Для OAuth через Supabase:
 - в Supabase Auth включён Google Provider с Client ID/Secret;
-- в Google OAuth Authorized redirect URI указан Supabase callback:
+- Яндекс подключён как **Custom Auth Provider** с provider id `custom:yandex`;
+- в OAuth-приложениях Google/Яндекс redirect URI указывает на Supabase callback:
   `https://<project-ref>.supabase.co/auth/v1/callback`;
-- в Supabase Auth Redirect URLs добавлен app callback:
-  `http://localhost:3000/auth/callback` для dev и `https://<домен>/auth/callback`
+- в Supabase Auth Redirect URLs добавлены app callbacks:
+  `http://localhost:3000/auth/callback` для dev и `https://jobswiper.ru/auth/callback`
   для production.
 
-`/api/auth/google` строит `redirectTo` из `NEXT_PUBLIC_SITE_URL` / `SITE_URL` /
-`APP_URL` / Vercel URL, а только затем из request origin. Это важно за reverse proxy:
-иначе OAuth может получить `http://localhost:3000` и Supabase вернёт code на
-локальный URL вместо production-домена.
+`/api/auth/google` и `/api/auth/yandex` строят `redirectTo` из
+`NEXT_PUBLIC_SITE_URL` / `SITE_URL` / `APP_URL` / Vercel URL, а только затем из
+request origin. Это важно за reverse proxy: иначе OAuth может получить
+`http://localhost:3000` и Supabase вернёт code на локальный URL вместо
+production-домена. `/auth/callback` обменивает `code` на cookie-сессию и возвращает
+пользователя на `next`, сохраняя query `auth=success|error` и `provider=google|yandex`.
+`AuthCodeBridge` дополнительно подхватывает `?code=...` на клиенте, если внешний
+редирект неожиданно пришёл не на `/auth/callback`.
+
+Yandex Custom Provider:
+- `Issuer URL`: `https://oauth.yandex.ru`;
+- `Authorization URL`: `https://oauth.yandex.ru/authorize`;
+- `Token URL`: `https://oauth.yandex.ru/token`;
+- `Userinfo URL`: `https://login.yandex.ru/info`;
+- `Scopes`: `login:info, login:email` (опционально `login:avatar`);
+- `Allow users without email`: лучше включить для Яндекса. Яндекс отдаёт email как
+  `default_email`/`emails`, а не как стандартное поле `email`; приложение достаёт
+  эти данные из `identities[].identity_data` в `/api/auth/session`.
 
 App-токен hh.ru кэшируется в таблице Supabase **`app_tokens`** (строка
 `id = 'hh'`). См. раздел 5.
@@ -106,10 +124,11 @@ src/
 │       ├── match/route.ts            # POST батч-оценка % (ИИ)
 │       ├── cover-letter/route.ts     # POST сопроводительное письмо (ИИ)
 │       ├── extract-resume/route.ts   # POST файл PDF/DOCX → текст
-│       ├── auth/                     # Google sign-in/session/sign-out
-│       └── db/                       # CRUD в Supabase (state/profile/swipe/matches/cover-letter/reset/merge)
+│       ├── auth/                     # Google/Yandex sign-in, session, sign-out
+│       └── db/                       # CRUD в Supabase (state/profile/swipe/matches/cover-letter/quota/reset/merge)
 │   └── auth/callback/route.ts        # OAuth callback: code → Supabase cookie-session
 ├── components/
+│   ├── auth-code-bridge.tsx  # страховка для OAuth code, пришедшего не на callback path
 │   ├── ui/                   # сгенерированные shadcn-примитивы (Base UI)
 │   ├── layout/bottom-nav.tsx # плавающая нижняя навигация (3 вкладки + бейдж)
 │   ├── swipe/
@@ -124,8 +143,9 @@ src/
 │   │   ├── custom-vacancy-sheet.tsx  # форма «своя вакансия → письмо»
 │   │   └── custom-letter-card.tsx    # карточка письма под свою вакансию
 │   ├── profile/
-│   │   ├── auth-buttons.tsx   # Google OAuth + выход из аккаунта
+│   │   ├── auth-buttons.tsx   # Google/Yandex OAuth + выход из аккаунта
 │   │   └── resume-form.tsx    # ввод/загрузка резюме + ИИ-анализ
+│   ├── paywall/               # Pro/paywall, лимит-диалог, временный gift +50 откликов
 │   ├── brand.tsx              # логотип JobSwiper
 │   ├── empty-state.tsx        # переиспользуемое «пусто»
 │   ├── employer-logo.tsx      # лого работодателя + фолбэк на инициалы
@@ -138,7 +158,7 @@ src/
     │   ├── dictionaries.ts     # справочники фильтров (опыт/график/занятость) + города
     │   ├── format.ts          # форматирование зарплаты, очистка HTML/сниппета, даты
     │   ├── client.ts          # серверный клиент hh.ru (поиск/детали/регионы)
-    │   └── token.ts           # менеджер app-токена hh.ru (кэш память+диск)
+    │   └── token.ts           # менеджер app-токена hh.ru (кэш память+Supabase)
     ├── ai/
     │   ├── client.ts          # клиент AITunnel (Mistral) + извлечение JSON
     │   └── prompts.ts         # сборка промптов (резюме/матч/письмо)
@@ -148,6 +168,9 @@ src/
     │   ├── server.ts          # серверный клиент Supabase (publishable-ключ)
     │   └── queries.ts         # слой запросов к БД (загрузка/сохранение/merge)
     ├── db-sync.ts             # браузерные обёртки к /api/db/* + auth/session bootstrap
+    ├── analytics.ts           # Yandex Metrika counter + reachGoal helper
+    ├── plans.ts               # бесплатные лимиты, тарифы, бонус +50 откликов
+    ├── site-url.ts            # production/dev origin для OAuth redirectTo
     ├── hooks/
     │   ├── use-vacancies.ts   # useInfiniteQuery вакансий
     │   ├── use-match-scores.ts# батч-расчёт % для верха колоды
@@ -241,6 +264,24 @@ grant_type=client_credentials&client_id=...&client_secret=...
 (`https://hh.ru/applicant/vacancy_response?vacancyId={id}`) — ведёт прямо в форму
 отклика. Реальный отклик через API не делаем (это потребовало бы соискательский OAuth).
 
+### Соискательский OAuth hh.ru (исследовано, пока не реализовано)
+Текущий hh-токен — **application token** для серверного поиска вакансий. Он не
+даёт доступ к резюме пользователя и не позволяет откликаться от его имени.
+
+Для импорта резюме hh.ru нужен отдельный пользовательский OAuth:
+- `GET https://hh.ru/oauth/authorize` с `response_type=code`, `client_id`,
+  `redirect_uri`, `state` и желательно PKCE (`code_challenge`, `S256`);
+- `POST https://api.hh.ru/token` с `grant_type=authorization_code` для обмена
+  кода на `access_token`/`refresh_token`;
+- `GET https://api.hh.ru/me` для проверки токена и получения `resumes_url`;
+- затем `GET /resumes/mine` и `GET /resumes/{resume_id}` для получения резюме.
+
+Архитектурно это лучше делать как «Подключить hh.ru» в личном кабинете, а не как
+замену Supabase Auth: Supabase остаётся основной авторизацией пользователя, а
+hh.ru OAuth хранится отдельной связкой токенов, привязанной к `auth.users.id`.
+Refresh token у hh.ru одноразовый, поэтому его надо обновлять только после
+истечения access token и сразу перезаписывать в БД.
+
 ---
 
 ## 6. Интеграция с AITunnel / Mistral (ИИ)
@@ -294,9 +335,11 @@ mistral-nemo   ← Mistral через AITunnel (контекст ~131K)
 | `/api/cover-letter` | POST | `{ resumeContext, vacancy }` | `{ text }` |
 | `/api/extract-resume` | POST | multipart `file` (PDF/DOCX, ≤8 МБ) | `{ text, name }` |
 | `/api/auth/google` | GET | `next` query | редирект на Google OAuth через Supabase |
-| `/auth/callback` | GET | `code`, `next` query | обмен code на cookie-сессию, редирект обратно |
+| `/api/auth/yandex` | GET | `next` query | редирект на Яндекс OAuth через Supabase custom provider |
+| `/auth/callback` | GET | `code`, `next`, `provider` query | обмен code на cookie-сессию, редирект обратно |
 | `/api/auth/session` | GET | — | `{ user }` по verified `auth.getUser()` |
 | `/api/auth/sign-out` | POST | — | выход из Supabase-сессии |
+| `/api/db/quota` | PUT | `{ quota, bonusClaimed }` | сохранить usage-лимиты и флаг бонуса |
 
 Нюансы:
 - **`/api/match`** ограничивает батч 10 вакансиями, клампит `score` в 0–100,
@@ -306,6 +349,8 @@ mistral-nemo   ← Mistral через AITunnel (контекст ~131K)
   он сам дотягивает полное описание через `getVacancy(id)`; если передан
   `description` напрямую (своя вакансия) — использует его.
 - **`/api/parse-resume`** валидирует `experienceId` по белому списку и обрезает поля.
+- **`/api/auth/yandex`** нормализует `SUPABASE_YANDEX_PROVIDER_ID`: `yandex`
+  превращается в `custom:yandex`, пустое значение тоже даёт `custom:yandex`.
 
 ---
 
@@ -318,12 +363,17 @@ localStorage хранится только анонимный `userId` (ключ
 ### Что в сторе
 ```ts
 userId         // анонимный id устройства (единственное в localStorage)
+authUser       // текущий Supabase user из verified session
+authChecked    // завершена ли проверка Supabase session
 profile        // ResumeProfile | null
 filters        // Filters
 seen           // Record<id, "liked" | "passed">  — что уже свайпнули
 liked          // Record<id, LikedItem>            — лайкнутые вакансии hh.ru
 matches        // Record<id, MatchResult>          — кэш % соответствия
 customLetters  // Record<id, CustomLetter>         — письма под свои вакансии
+quota          // usage: отклики, анализы вакансий, разборы резюме
+proBonusClaimed // выдан ли временный бонус +50 откликов
+paywallOpen / limitDialogKind / giftDialogOpen // UI-состояния монетизации
 ```
 
 ### Загрузка (bootstrap)
@@ -342,6 +392,7 @@ Supabase-сессия, bootstrap использует `auth.users.id`; если 
 - `removeLiked` → удаление свайпа и письма;
 - генерация письма ([`cover-letter.ts`](src/lib/cover-letter.ts)) → `POST /api/db/cover-letter`;
 - расчёт % ([`use-match-scores.ts`](src/lib/hooks/use-match-scores.ts)) → `POST /api/db/matches`.
+- расход лимитов / бонус ([`plans.ts`](src/lib/plans.ts)) → `PUT /api/db/quota`.
 
 ### Гидратация (против mismatch)
 Флаг **`hydrated`** = «данные из Supabase загружены». На сервере и при первом
@@ -362,11 +413,12 @@ Supabase-сессия, bootstrap использует `auth.users.id`; если 
 ### Таблицы
 | Таблица | Назначение | Первичный ключ |
 |---|---|---|
-| `users` | анонимный пользователь + резюме + фильтры (1 строка на устройство) | `id` (uuid) |
+| `users` | пользователь + резюме + фильтры + usage-лимиты (`responses_used`, `analyses_used`, `resumes_used`, `bonus_claimed`) | `id` (uuid) |
 | `vacancies` | кэш вакансий, с которыми взаимодействовали (снапшот + поля) | `id` (hh.ru id) |
 | `match_scores` | ИИ-% соответствия резюме↔вакансия | `(user_id, vacancy_id)` |
 | `swipes` | история свайпов («seen»); лайки = `direction='liked'` | `(user_id, vacancy_id)` |
 | `cover_letters` | письма: `kind='liked'` (id=vacancy) или `kind='custom'` (id=uuid) | `(user_id, id)` |
+| `app_tokens` | серверные app-токены внешних API, сейчас `id='hh'` | `id` |
 
 `match_scores`, `swipes`, `cover_letters` ссылаются на `users` и `vacancies`
 (FK, `on delete cascade`). Поэтому перед записью свайпа/матча/письма роут сначала
@@ -380,6 +432,7 @@ Supabase-сессия, bootstrap использует `auth.users.id`; если 
 | `swipe` | POST | записать/удалить свайп (+ апсерт вакансии и матча) |
 | `matches` | POST | апсерт батча оценок (со снапшотами вакансий) |
 | `cover-letter` | POST | сохранить/удалить письмо (liked/custom) |
+| `quota` | PUT | сохранить usage-лимиты и флаг временного бонуса |
 | `reset` | POST | очистить свайпы и письма лайков |
 
 ### RLS и безопасность
@@ -392,6 +445,46 @@ RLS включён на всех таблицах. API-роуты теперь a
 режим на уровне PostgREST. Сейчас браузер всё равно не ходит в Supabase напрямую,
 но строгие RLS-политики нужны для полноценного hardening. Смена резюме чистит
 устаревшие оценки колоды (`clearDeckMatches`), сохраняя оценки уже лайкнутых вакансий.
+
+## 8.2. Лимиты, paywall и тарифы
+
+Источник правил — [`src/lib/plans.ts`](src/lib/plans.ts):
+- бесплатный лимит: 10 откликов, 30 анализов вакансий, 3 разбора резюме;
+- временный бонус из paywall: +50 откликов один раз (`bonus_claimed`);
+- тарифы UI: «Неделя» 99 ₽ и «Месяц» 299 ₽.
+
+Пока оплата не подключена, paywall не создаёт платёж, а выдаёт одноразовый бонус.
+Расходы считаются в сторе и сохраняются в `users` через `/api/db/quota`. При merge
+анонимного пользователя в авторизованный аккаунт берётся **большее** usage-значение,
+чтобы сменой устройства нельзя было сбросить лимиты; `bonus_claimed` становится
+`true`, если бонус был выдан хотя бы на одном из аккаунтов.
+
+## 8.3. Аналитика (Yandex Metrika)
+
+Счётчик Метрики подключён в [`src/app/layout.tsx`](src/app/layout.tsx) через
+`next/script` со стратегией `afterInteractive`. Counter ID — `109742095`, Webvisor,
+clickmap, `trackLinks`, `accurateTrackBounce` включены. `noscript`-fallback тоже
+добавлен.
+
+Единая точка отправки целей — [`src/lib/analytics.ts`](src/lib/analytics.ts).
+`trackGoal()` вызывает `ym(counterId, "reachGoal", goal, params)`, не падает при
+отсутствии `window.ym`, выкидывает пустые параметры и обрезает длинные строки до
+160 символов. В аналитику не отправляется текст резюме, текст вакансии или письмо.
+
+Цели:
+
+| Goal ID | Когда срабатывает | Приоритет |
+|---|---|---|
+| `resume_analyze_success` | резюме успешно разобрано ИИ | ключевая |
+| `vacancy_feed_loaded` | лента вакансий успешно загрузилась | диагностическая |
+| `response_created` | пользователь свайпнул вакансию вправо | ключевая |
+| `cover_letter_success` | ИИ успешно сгенерировал письмо | ключевая |
+| `hh_apply_click` | пользователь нажал переход к отклику на hh.ru | ключевая |
+| `paywall_open` | открыт paywall | монетизация |
+| `subscription_cta_click` | нажата CTA-кнопка тарифа/бонуса | монетизация |
+| `limit_dialog_open` | открыт диалог исчерпанного лимита | монетизация |
+| `vacancy_feed_error` | hh.ru/сервер не загрузил вакансии | диагностика |
+| `cover_letter_error` | генерация письма завершилась ошибкой | диагностика |
 
 ---
 
@@ -425,9 +518,17 @@ RLS включён на всех таблицах. API-роуты теперь a
 
 Два сценария, общий механизм:
 - **При свайпе вправо** → `generateCoverLetter(vacancyId)`: берёт `liked[id]`,
-  дотягивает описание вакансии по id на сервере, пишет письмо.
+  передаёт на сервер уже загруженную карточку вакансии; если полного описания нет,
+  сервер дотягивает его по id и пишет письмо.
 - **Своя вакансия** → `generateCustomLetter(id)`: берёт `customLetters[id]`,
   передаёт вставленный текст как описание.
+
+Промпт письма строго использует два источника: блок вакансии и резюме. Правила:
+не придумывать факты, не использовать данные вне резюме, plain text без markdown,
+3–5 предложений, без обращения, названия компании, названия вакансии и фраз вроде
+«готов обсудить». В реальном использовании в `${vacancyBlock}` попадает конкретная
+вакансия из карточки отклика/вставленный текст своей вакансии, а в `${resume}` —
+актуальное резюме из личного кабинета (`buildResumeContext`).
 
 Нюанс — **модульный `inFlight: Set`**: статус `loading` хранится в persist, поэтому
 после перезагрузки «зависший» `loading` не блокирует повтор. Реально выполняющиеся
@@ -543,6 +644,15 @@ shadcn-стиль **`base-nova`** генерирует компоненты на
   └─ addCustomLetter + generateCustomLetter(id)
        └─ /api/cover-letter (description напрямую) ─(ИИ)→ store.customLetters[id]
 
+Авторизация
+  └─ /api/auth/google или /api/auth/yandex
+       └─ Supabase OAuth provider ─→ /auth/callback?code=...
+            └─ exchangeCodeForSession ─→ cookie-session + /api/db/merge
+
+Лимиты и paywall
+  └─ consumeResponses/consumeAnalyses/consumeResumeParse
+       └─ /api/db/quota ─→ users.responses_used / analyses_used / resumes_used / bonus_claimed
+
 Персистенс (параллельно мутациям)
   старт приложения ─(store-bootstrap)→ GET /api/db/state ─→ store
   любая мутация store.*  ─(db-sync)→ POST/PUT /api/db/* ─→ Supabase
@@ -581,21 +691,30 @@ npx tsc --noEmit   # только проверка типов
 8. **Данные — в Supabase** (Postgres), не в localStorage. В браузере остаётся только
    анонимный `userId`; при входе используется Supabase Auth user id. Доступ к БД —
    только через серверные `/api/db/*` (раздел 8.1).
-9. **Google Auth:** использовать `@supabase/ssr`, `proxy.ts`, `getAll/setAll` cookies
-   и verified `auth.getUser()`; не использовать deprecated auth-helpers.
-10. **Ключи только на сервере** — никогда не дёргать hh.ru/AITunnel из браузера
+9. **Supabase Auth:** Google — встроенный провайдер, Яндекс — custom provider
+   `custom:yandex`; использовать `@supabase/ssr`, `proxy.ts`, `getAll/setAll`
+   cookies и verified `auth.getUser()`; не использовать deprecated auth-helpers.
+10. **OAuth redirect origin:** production callback строится из `NEXT_PUBLIC_SITE_URL`,
+    а не из `request.origin`, чтобы за proxy/Vercel не получить `localhost`.
+11. **Метрика:** события отправлять только через `trackGoal()`, без текста резюме,
+    вакансии и письма в параметрах.
+12. **Лимиты:** любые расходы откликов/анализов/разборов резюме синхронизировать
+    через `/api/db/quota`; merge аккаунтов не должен сбрасывать usage.
+13. **Ключи только на сервере** — никогда не дёргать hh.ru/AITunnel из браузера
     напрямую.
-11. **HTML с hh.ru санитайзить** (DOMPurify), сниппеты чистить от `<highlighttext>`.
-12. **Next 16:** в route-хендлерах `params` — это `Promise` (`await params`).
+14. **HTML с hh.ru санитайзить** (DOMPurify), сниппеты чистить от `<highlighttext>`.
+15. **Next 16:** в route-хендлерах `params` — это `Promise` (`await params`).
 
 ---
 
 ## 18. Возможные доработки
 
-- Подключить Яндекс OAuth.
 - Ужесточить RLS-политики под финальную модель гостевого/авторизованного доступа.
+- Подключить hh.ru OAuth соискателя: импорт резюме из `/resumes/mine`, хранение
+  access/refresh token, refresh-flow.
 - Стриминг сопроводительного письма (token-by-token).
 - Реальный отклик на hh.ru через соискательский OAuth (`POST /negotiations`).
+- Реальные платежи вместо временного бонуса +50 откликов.
 - Больше фильтров (профroles, индустрии, метро), сохранённые поиски.
 - Кэш оценок с TTL и инвалидация по версии резюме.
 ```

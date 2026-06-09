@@ -4,6 +4,8 @@ import { getAppOrigin } from "@/lib/site-url";
 
 export const runtime = "nodejs";
 
+const YANDEX_SCOPES = "login:info login:email";
+
 function redirectNoStore(url: string | URL) {
   const response = NextResponse.redirect(url);
   response.headers.set("Cache-Control", "private, no-store");
@@ -31,6 +33,7 @@ export async function GET(req: Request) {
     provider: getYandexProvider(),
     options: {
       redirectTo: redirectTo.toString(),
+      scopes: YANDEX_SCOPES,
     },
   });
 
