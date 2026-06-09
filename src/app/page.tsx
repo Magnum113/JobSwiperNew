@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -21,6 +21,7 @@ import { useLimits } from "@/lib/hooks/use-limits";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { buildResumeContext } from "@/lib/resume";
 import { generateCoverLetter } from "@/lib/cover-letter";
+import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
 import type { HHVacancyItem } from "@/lib/hh/types";
 import type { SwipeDirection } from "@/lib/types";
 
@@ -49,6 +50,8 @@ export default function HomePage() {
   const consumeResponse = useAppStore((s) => s.consumeResponse);
   const openLimitDialog = useAppStore((s) => s.openLimitDialog);
   const { remaining } = useLimits();
+  const feedLoadedKeyRef = useRef<string | null>(null);
+  const feedErrorKeyRef = useRef<string | null>(null);
 
   const enabled = hydrated && !!profile;
 
@@ -104,6 +107,59 @@ export default function HomePage() {
     }
   }, [deckItems.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  useEffect(() => {
+    if (!enabled || isLoading || isError) return;
+    const firstPage = data?.pages?.[0];
+    if (!firstPage) return;
+
+    const key = JSON.stringify({
+      text: filters.text,
+      area: filters.area,
+      salary: filters.salary,
+      onlyWithSalary: filters.onlyWithSalary,
+      experience: filters.experience,
+      employment: filters.employment,
+      schedule: filters.schedule,
+      orderBy: filters.orderBy,
+      found: firstPage.found,
+    });
+    if (feedLoadedKeyRef.current === key) return;
+    feedLoadedKeyRef.current = key;
+
+    trackGoal(ANALYTICS_GOALS.vacancyFeedLoaded, {
+      found: firstPage.found,
+      shown: firstPage.items.length,
+      area: filters.area,
+      has_query: Boolean(filters.text.trim()),
+      query_length: filters.text.trim().length,
+      has_salary_filter: Boolean(filters.salary || filters.onlyWithSalary),
+      experience_count: filters.experience.length,
+      employment_count: filters.employment.length,
+      schedule_count: filters.schedule.length,
+    });
+  }, [data, enabled, filters, isError, isLoading]);
+
+  useEffect(() => {
+    if (!enabled || !isError) return;
+
+    const message =
+      error instanceof Error ? error.message : "unknown_feed_error";
+    const key = JSON.stringify({
+      text: filters.text,
+      area: filters.area,
+      message,
+    });
+    if (feedErrorKeyRef.current === key) return;
+    feedErrorKeyRef.current = key;
+
+    trackGoal(ANALYTICS_GOALS.vacancyFeedError, {
+      area: filters.area,
+      has_query: Boolean(filters.text.trim()),
+      query_length: filters.text.trim().length,
+      error_message: message,
+    });
+  }, [enabled, error, filters, isError]);
+
   const [selected, setSelected] = useState<HHVacancyItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -115,6 +171,10 @@ export default function HomePage() {
       }
       consumeResponse();
       like(vacancy, matches[vacancy.id]);
+      trackGoal(ANALYTICS_GOALS.responseCreated, {
+        vacancy_id: vacancy.id,
+        match_score: matches[vacancy.id]?.score,
+      });
       generateCoverLetter(vacancy.id);
       toast.success("Добавлено в отклики", {
         description: "ИИ готовит сопроводительное письмо…",

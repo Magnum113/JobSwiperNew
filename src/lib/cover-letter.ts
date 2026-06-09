@@ -2,6 +2,7 @@ import { postCoverLetter, postCustomCoverLetter } from "./api-client";
 import { buildResumeContext } from "./resume";
 import { useAppStore } from "./store/use-app-store";
 import { pushCoverLetter } from "./db-sync";
+import { ANALYTICS_GOALS, trackGoal } from "./analytics";
 
 // Tracks letters actually being generated *right now* in this tab. Persisted
 // "loading" states from a previous session won't be here, so they can be retried.
@@ -42,6 +43,12 @@ export async function generateCoverLetter(vacancyId: string): Promise<void> {
       status: "done",
       createdAt: Date.now(),
     });
+    trackGoal(ANALYTICS_GOALS.coverLetterSuccess, {
+      vacancy_source: "hh",
+      vacancy_id: vacancyId,
+      letter_chars: text.length,
+      match_score: item.match?.score,
+    });
     pushCoverLetter(userId, {
       id: vacancyId,
       kind: "liked",
@@ -50,8 +57,13 @@ export async function generateCoverLetter(vacancyId: string): Promise<void> {
       letterText: text,
       status: "done",
     });
-  } catch {
+  } catch (err) {
     useAppStore.getState().setCoverLetter(vacancyId, { status: "error" });
+    trackGoal(ANALYTICS_GOALS.coverLetterError, {
+      vacancy_source: "hh",
+      vacancy_id: vacancyId,
+      error_message: err instanceof Error ? err.message : "unknown_error",
+    });
     pushCoverLetter(userId, {
       id: vacancyId,
       kind: "liked",
@@ -95,9 +107,19 @@ export async function generateCustomLetter(id: string): Promise<void> {
       status: "done",
       createdAt: Date.now(),
     });
+    trackGoal(ANALYTICS_GOALS.coverLetterSuccess, {
+      vacancy_source: "custom",
+      custom_id: id,
+      letter_chars: text.length,
+    });
     pushCoverLetter(userId, { ...base, letterText: text, status: "done" });
-  } catch {
+  } catch (err) {
     useAppStore.getState().setCustomLetterState(id, { status: "error" });
+    trackGoal(ANALYTICS_GOALS.coverLetterError, {
+      vacancy_source: "custom",
+      custom_id: id,
+      error_message: err instanceof Error ? err.message : "unknown_error",
+    });
     pushCoverLetter(userId, { ...base, status: "error" });
   } finally {
     inFlight.delete(id);

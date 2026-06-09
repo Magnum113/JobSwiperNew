@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { Crown, Lock } from "lucide-react";
 import {
   Dialog,
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/store/use-app-store";
+import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
 import type { LimitKind } from "@/lib/store/use-app-store";
 
 const COPY: Record<LimitKind, { title: string; text: string }> = {
@@ -32,6 +34,13 @@ export function LimitReachedDialog() {
   const openPaywall = useAppStore((s) => s.openPaywall);
 
   const copy = kind ? COPY[kind] : null;
+
+  useEffect(() => {
+    if (!kind) return;
+    trackGoal(ANALYTICS_GOALS.limitDialogOpen, {
+      limit_kind: kind,
+    });
+  }, [kind]);
 
   const handleUpgrade = () => {
     closeLimitDialog();

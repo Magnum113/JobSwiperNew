@@ -19,6 +19,7 @@ import { MatchRing } from "@/components/match-ring";
 import { matchStyle } from "@/lib/match-style";
 import { formatSalary } from "@/lib/hh/format";
 import { cn } from "@/lib/utils";
+import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
 import type { HHVacancyItem, HHVacancyDetail } from "@/lib/hh/types";
 import type { MatchResult } from "@/lib/types";
 
@@ -213,6 +214,14 @@ export function VacancyDetailDialog({
                       href={applyUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() =>
+                        trackGoal(ANALYTICS_GOALS.hhApplyClick, {
+                          source: "vacancy_details",
+                          vacancy_id: vacancy.id,
+                          has_letter: false,
+                          match_score: match?.score,
+                        })
+                      }
                     />
                   }
                 >

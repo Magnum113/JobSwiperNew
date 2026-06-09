@@ -26,6 +26,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
 import { useLimits } from "@/lib/hooks/use-limits";
 import { postParseResume, postExtractResume } from "@/lib/api-client";
 import { EXPERIENCE_OPTIONS } from "@/lib/hh/dictionaries";
+import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 const MIN_LEN = 60;
@@ -68,6 +69,13 @@ export function ResumeForm() {
     try {
       const parsed = await postParseResume(value);
       consumeResume();
+      trackGoal(ANALYTICS_GOALS.resumeAnalyzeSuccess, {
+        source: overrideText ? "file" : "text",
+        resume_chars: value.length,
+        title_detected: Boolean(parsed.title),
+        seniority: parsed.seniority,
+        experience_id: parsed.experienceId,
+      });
       setProfile({
         rawText: value,
         title: parsed.title,

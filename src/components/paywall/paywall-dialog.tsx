@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Crown, Check, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,9 +13,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { PLANS, PRO_BENEFITS, type Plan } from "@/lib/plans";
+import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
 
 export function PaywallDialog() {
   const open = useAppStore((s) => s.paywallOpen);
+  const source = useAppStore((s) => s.paywallSource);
   const closePaywall = useAppStore((s) => s.closePaywall);
   const proBonusClaimed = useAppStore((s) => s.proBonusClaimed);
   const claimProBonus = useAppStore((s) => s.claimProBonus);
@@ -26,7 +28,19 @@ export function PaywallDialog() {
 
   const plan = PLANS.find((p) => p.id === planId) ?? PLANS[0];
 
+  useEffect(() => {
+    if (!open) return;
+    trackGoal(ANALYTICS_GOALS.paywallOpen, {
+      source: source ?? "unknown",
+    });
+  }, [open, source]);
+
   const handlePay = () => {
+    trackGoal(ANALYTICS_GOALS.subscriptionCtaClick, {
+      plan_id: plan.id,
+      price: plan.price,
+      source: source ?? "unknown",
+    });
     closePaywall();
     if (!proBonusClaimed) {
       claimProBonus();

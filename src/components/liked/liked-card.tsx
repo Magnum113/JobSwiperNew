@@ -25,6 +25,7 @@ import {
 } from "@/lib/cover-letter";
 import { formatSalary } from "@/lib/hh/format";
 import { matchStyle } from "@/lib/match-style";
+import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import type { LikedItem } from "@/lib/types";
 
@@ -179,7 +180,19 @@ export function LikedCard({
             className="flex-1 bg-gradient-brand"
             nativeButton={false}
             render={
-              <a href={applyUrl} target="_blank" rel="noopener noreferrer" />
+              <a
+                href={applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() =>
+                  trackGoal(ANALYTICS_GOALS.hhApplyClick, {
+                    source: "liked_card",
+                    vacancy_id: id,
+                    has_letter: showLetter,
+                    match_score: match?.score,
+                  })
+                }
+              />
             }
           >
             <ExternalLink className="size-4" />
