@@ -66,9 +66,12 @@ export function AuthButtons() {
     const params = new URLSearchParams(window.location.search);
     const auth = params.get("auth");
     const provider = params.get("provider");
-    const authError = params.get("auth_error");
+    const directOauthError =
+      params.get("error_description") ?? params.get("error");
+    const authError = params.get("auth_error") ?? directOauthError;
+    const authStatus = auth ?? (directOauthError ? "error" : null);
     const providerName = provider === "yandex" ? "Яндекс" : "Google";
-    if (auth === "success") {
+    if (authStatus === "success") {
       toast.success(`Вы вошли через ${providerName}`);
       getAuthUser().then((freshUser) => {
         if (cancelled) return;
@@ -88,7 +91,7 @@ export function AuthButtons() {
         }
       });
       window.history.replaceState(null, "", window.location.pathname);
-    } else if (auth === "error") {
+    } else if (authStatus === "error") {
       setAuthIssue({
         title: `Не удалось войти через ${providerName}`,
         detail: authError ?? undefined,

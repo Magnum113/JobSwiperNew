@@ -91,10 +91,10 @@ Yandex Custom Provider:
 - `Authorization URL`: `https://oauth.yandex.ru/authorize`;
 - `Token URL`: `https://oauth.yandex.ru/token`;
 - `Userinfo URL`: `https://login.yandex.ru/info`;
-- `Scopes`: `login:info,login:email` (запятая, без пробела; опционально
-  `login:avatar`). В коде `/api/auth/yandex` это дополнительно передаётся как
-  provider query param `scope`, потому что Яндекс ожидает comma-separated
-  permissions, а не space-separated OAuth scopes;
+- `Scopes`: не переопределять из кода. В Яндекс OAuth приложение должно быть типа
+  «Для авторизации пользователей», а в **Data access** должны быть выбраны нужные
+  доступы: логин/имя и email. Если Яндекс показывает `invalid_scope`, значит
+  запрошенный scope не выбран или не поддерживается для этого приложения;
 - `Allow users without email`: лучше включить для Яндекса. Яндекс отдаёт email как
   `default_email`/`emails`, а не как стандартное поле `email`; приложение достаёт
   эти данные из `identities[].identity_data` в `/api/auth/session`.

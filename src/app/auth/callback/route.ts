@@ -26,12 +26,30 @@ function safeErrorMessage(error: { message?: string } | null): string {
   return message ? message.slice(0, 180) : "OAuth callback failed";
 }
 
+function safeQueryError(url: URL): string | null {
+  const message =
+    url.searchParams.get("error_description") ??
+    url.searchParams.get("error") ??
+    url.searchParams.get("message");
+  const trimmed = message?.trim();
+  return trimmed ? trimmed.slice(0, 180) : null;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const appOrigin = getAppOrigin(req);
   const code = url.searchParams.get("code");
   const next = safeNextPath(url.searchParams.get("next"));
   const provider = safeProvider(url.searchParams.get("provider"));
+  const queryError = safeQueryError(url);
+
+  if (!code && queryError) {
+    const redirectUrl = new URL(next, appOrigin);
+    redirectUrl.searchParams.set("auth", "error");
+    if (provider) redirectUrl.searchParams.set("provider", provider);
+    redirectUrl.searchParams.set("auth_error", queryError);
+    return redirectNoStore(redirectUrl);
+  }
 
   if (code) {
     const supabase = await createSupabaseAuthClient();
