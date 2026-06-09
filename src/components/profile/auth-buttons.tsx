@@ -53,6 +53,25 @@ function YandexIcon() {
   );
 }
 
+function HhIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
+      <rect x="1" y="1" width="22" height="22" rx="5" fill="#D6001C" />
+      <text
+        fill="#fff"
+        x="12"
+        y="17"
+        textAnchor="middle"
+        fontFamily="Arial, Helvetica, sans-serif"
+        fontSize="12"
+        fontWeight="700"
+      >
+        hh
+      </text>
+    </svg>
+  );
+}
+
 export function AuthButtons() {
   const [signingOut, setSigningOut] = useState(false);
   const [authIssue, setAuthIssue] = useState<AuthIssue | null>(null);
@@ -70,7 +89,12 @@ export function AuthButtons() {
       params.get("error_description") ?? params.get("error");
     const authError = params.get("auth_error") ?? directOauthError;
     const authStatus = auth ?? (directOauthError ? "error" : null);
-    const providerName = provider === "yandex" ? "Яндекс" : "Google";
+    const providerName =
+      provider === "yandex"
+        ? "Яндекс"
+        : provider === "hh"
+          ? "hh.ru"
+          : "Google";
     if (authStatus === "success") {
       toast.success(`Вы вошли через ${providerName}`);
       getAuthUser().then((freshUser) => {
@@ -116,6 +140,10 @@ export function AuthButtons() {
     window.location.assign("/api/auth/yandex?next=/profile");
   };
 
+  const signInWithHh = () => {
+    window.location.assign("/api/auth/hh?next=/profile");
+  };
+
   const signOut = async () => {
     setSigningOut(true);
     try {
@@ -147,6 +175,14 @@ export function AuthButtons() {
         >
           <YandexIcon />
           Войти через Яндекс
+        </Button>
+        <Button
+          variant="outline"
+          className="h-11 justify-center gap-2 rounded-xl sm:col-span-2"
+          disabled
+        >
+          <HhIcon />
+          Войти через hh.ru
         </Button>
       </div>
     );
@@ -206,6 +242,14 @@ export function AuthButtons() {
         >
           <YandexIcon />
           Войти через Яндекс
+        </Button>
+        <Button
+          variant="outline"
+          className="h-11 justify-center gap-2 rounded-xl sm:col-span-2"
+          onClick={signInWithHh}
+        >
+          <HhIcon />
+          Войти через hh.ru
         </Button>
       </div>
     </div>

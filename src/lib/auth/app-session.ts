@@ -3,7 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 
-export type AppAuthProvider = "yandex";
+export type AppAuthProvider = "yandex" | "hh";
 
 export interface AppAuthUser {
   id: string;
@@ -81,7 +81,7 @@ function isAppAuthUser(value: unknown): value is AppAuthUser {
     (user.email === null || typeof user.email === "string") &&
     (user.name === null || typeof user.name === "string") &&
     (user.avatarUrl === null || typeof user.avatarUrl === "string") &&
-    user.provider === "yandex"
+    (user.provider === "yandex" || user.provider === "hh")
   );
 }
 

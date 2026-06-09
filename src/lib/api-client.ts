@@ -1,6 +1,7 @@
 // Browser-side fetch wrappers around our own /api routes.
 import type { HHSearchResponse, HHVacancyItem } from "./hh/types";
-import type { Filters, MatchResult } from "./types";
+import type { Filters, MatchResult, ResumeProfile } from "./types";
+import type { HhResumeChoice } from "./hh/resume-map";
 import { cleanSnippet } from "./hh/format";
 
 async function asError(res: Response): Promise<never> {
@@ -119,6 +120,26 @@ export async function postParseResume(
   });
   if (!res.ok) await asError(res);
   return res.json();
+}
+
+/** List the signed-in user's hh.ru resumes (for the chooser). */
+export async function fetchHhResumes(): Promise<HhResumeChoice[]> {
+  const res = await fetch("/api/hh/resumes", { cache: "no-store" });
+  if (!res.ok) await asError(res);
+  const data = await res.json();
+  return (data.resumes ?? []) as HhResumeChoice[];
+}
+
+/** Import a chosen hh.ru resume into the profile. */
+export async function importHhResume(resumeId: string): Promise<ResumeProfile> {
+  const res = await fetch("/api/hh/resumes/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resumeId }),
+  });
+  if (!res.ok) await asError(res);
+  const data = await res.json();
+  return data.profile as ResumeProfile;
 }
 
 /** Upload a PDF/DOCX resume and get back extracted plain text. */

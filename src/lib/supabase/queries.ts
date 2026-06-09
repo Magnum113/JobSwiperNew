@@ -218,6 +218,59 @@ export async function mergeUsers(
   }
 }
 
+/* --------------------------- hh.ru connections ---------------------------- */
+
+export interface HhConnection {
+  hhUserId: string;
+  accessToken: string;
+  refreshToken: string | null;
+  /** Unix ms. */
+  expiresAt: number;
+}
+
+export async function saveHhConnection(
+  userId: string,
+  conn: HhConnection,
+): Promise<void> {
+  const sb = getSupabase();
+  await ensureUser(userId);
+  const { error } = await sb.from("hh_connections").upsert(
+    {
+      user_id: userId,
+      hh_user_id: conn.hhUserId,
+      access_token: conn.accessToken,
+      refresh_token: conn.refreshToken,
+      expires_at: new Date(conn.expiresAt).toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+export async function getHhConnection(
+  userId: string,
+): Promise<HhConnection | null> {
+  const sb = getSupabase();
+  const { data } = await sb
+    .from("hh_connections")
+    .select("hh_user_id, access_token, refresh_token, expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data?.access_token) return null;
+  return {
+    hhUserId: data.hh_user_id,
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token ?? null,
+    expiresAt: new Date(data.expires_at).getTime(),
+  };
+}
+
+export async function deleteHhConnection(userId: string): Promise<void> {
+  const sb = getSupabase();
+  await sb.from("hh_connections").delete().eq("user_id", userId);
+}
+
 /* ------------------------------- vacancies -------------------------------- */
 
 export async function upsertVacancies(
