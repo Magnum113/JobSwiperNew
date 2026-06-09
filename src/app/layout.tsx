@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JobSwiper — вакансии HH.ru как в Tinder",
+  title: "JobSwiper — подбор вакансий с помощью ИИ",
   description:
-    "Свайпай вакансии с hh.ru, узнавай ИИ-совместимость с резюме и получай готовое сопроводительное письмо.",
+    "ИИ подбирает релевантные вакансии по резюме, оценивает совпадение и помогает откликнуться с персональным сопроводительным письмом.",
 };
 
 export const viewport: Viewport = {
