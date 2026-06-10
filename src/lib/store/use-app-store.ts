@@ -171,10 +171,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
       filters: {
         ...state.filters,
         text: p.title || state.filters.text,
-        experience:
-          state.filters.experience.length === 0 && p.experienceId
-            ? [p.experienceId]
-            : state.filters.experience,
       },
     }));
     const { userId, filters } = get();

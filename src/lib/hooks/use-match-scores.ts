@@ -27,7 +27,9 @@ export function useMatchScores(
   const userId = useAppStore((s) => s.userId);
 
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   const stateRef = useRef({
     ctx: "",
@@ -36,6 +38,7 @@ export function useMatchScores(
     running: 0, // number of batches currently in flight
   });
   const [tick, setTick] = useState(0);
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
 
   const windowIds = items
     .slice(0, WINDOW)
@@ -50,6 +53,7 @@ export function useMatchScores(
       st.attempted = new Set();
       st.inFlight = new Set();
       st.running = 0;
+      setLoadingIds(new Set());
     }
     if (!enabled || !resumeContext) return;
     if (st.running >= MAX_CONCURRENT) return; // concurrency cap reached
@@ -57,9 +61,10 @@ export function useMatchScores(
     // Stop scoring once the account's analysis quota is used up. In-flight cards
     // aren't counted against quota until they succeed, so reserve them now to
     // avoid overspending across parallel batches.
-    const { quota, proBonusClaimed } = useAppStore.getState();
+    const { quota, proBonusClaimed, purchasedLimits } = useAppStore.getState();
+    const freeLimits = getFreeLimits(proBonusClaimed);
     const analysesLeft =
-      getFreeLimits(proBonusClaimed).analyses - quota.analysesUsed;
+      freeLimits.analyses + purchasedLimits.analyses - quota.analysesUsed;
     let budget = analysesLeft - st.inFlight.size;
     if (budget <= 0) return;
 
@@ -110,6 +115,7 @@ export function useMatchScores(
             st.attempted.add(v.id);
           });
           st.running = Math.max(0, st.running - 1);
+          setLoadingIds(new Set(st.inFlight));
           setTick((t) => t + 1); // free a slot → let the next batch start
         });
     };
@@ -127,6 +133,7 @@ export function useMatchScores(
       idx += size;
       budget -= size;
       batch.forEach((v) => st.inFlight.add(v.id));
+      setLoadingIds(new Set(st.inFlight));
       st.running += 1;
       launched = true;
       runBatch(batch);
@@ -135,6 +142,5 @@ export function useMatchScores(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowIds, resumeContext, enabled, tick]);
 
-  const loadingIds = new Set(stateRef.current.inFlight);
   return loadingIds;
 }
