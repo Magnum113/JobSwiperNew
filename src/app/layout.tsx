@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { LegalFooter } from "@/components/layout/legal-footer";
 import { YM_COUNTER_ID } from "@/lib/analytics";
 
 const geistSans = Geist({
@@ -42,6 +43,7 @@ export default function RootLayout({
         <Providers>
           <div className="app-aurora relative mx-auto flex min-h-dvh w-full max-w-2xl flex-col">
             <main className="flex flex-1 flex-col pb-24">{children}</main>
+            <LegalFooter />
             <BottomNav />
           </div>
         </Providers>

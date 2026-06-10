@@ -150,6 +150,16 @@
     text-wrap: balance;
   }
 
+  .legal-document a {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .legal-document p,
+  .legal-document li {
+    overflow-wrap: anywhere;
+  }
+
   /* Brand gradient text + fills */
   .text-gradient-brand {
     background: linear-gradient(

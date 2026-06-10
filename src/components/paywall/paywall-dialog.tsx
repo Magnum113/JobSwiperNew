@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Crown, Check, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -174,6 +175,37 @@ export function PaywallDialog() {
           </Button>
           <p className="mt-2.5 text-center text-xs text-muted-foreground">
             Разовая покупка · Безопасная оплата
+          </p>
+          <p className="mt-2 text-center text-[11px] leading-4 text-muted-foreground">
+            Нажимая «Купить пакет», вы соглашаетесь с{" "}
+            <Link
+              href="/legal/offer"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              офертой
+            </Link>
+            ,{" "}
+            <Link
+              href="/legal/privacy"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              политикой конфиденциальности
+            </Link>
+            ,{" "}
+            <Link
+              href="/legal/personal-data"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              обработкой персональных данных
+            </Link>{" "}
+            и{" "}
+            <Link
+              href="/legal/refund"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              условиями возврата
+            </Link>
+            .
           </p>
         </div>
       </DialogContent>
