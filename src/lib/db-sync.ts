@@ -1,6 +1,7 @@
 // Browser-side sync layer: talks to our /api/db routes (which use Supabase).
 // The ONLY thing kept in localStorage is the anonymous user id.
 import type { HHVacancyItem } from "./hh/types";
+import type { Limits } from "./plans";
 import type {
   Filters,
   MatchResult,
@@ -73,6 +74,7 @@ export interface RemoteState {
   customLetters: Record<string, CustomLetter>;
   quota?: QuotaUsage;
   bonusClaimed?: boolean;
+  purchasedLimits?: Limits;
 }
 
 async function send(method: "POST" | "PUT", path: string, body: unknown) {

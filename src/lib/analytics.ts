@@ -8,6 +8,8 @@ export const ANALYTICS_GOALS = {
   hhApplyClick: "hh_apply_click",
   paywallOpen: "paywall_open",
   subscriptionCtaClick: "subscription_cta_click",
+  paymentSuccess: "payment_success",
+  paymentFail: "payment_fail",
   limitDialogOpen: "limit_dialog_open",
   vacancyFeedError: "vacancy_feed_error",
   coverLetterError: "cover_letter_error",

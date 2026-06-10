@@ -2,6 +2,7 @@ import { SunMoon } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthButtons } from "@/components/profile/auth-buttons";
+import { PaymentStatusBridge } from "@/components/profile/payment-status-bridge";
 import { ResumeForm } from "@/components/profile/resume-form";
 import { UpgradeCard } from "@/components/profile/upgrade-card";
 import {
@@ -14,6 +15,7 @@ import {
 export default function ProfilePage() {
   return (
     <div className="flex flex-1 flex-col">
+      <PaymentStatusBridge />
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl">
         <BrandMark />
       </header>

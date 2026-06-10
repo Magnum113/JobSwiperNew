@@ -56,7 +56,10 @@ function LimitRow({
 /** Limit block in the profile: current remaining limits + purchase CTA. */
 export function UpgradeCard() {
   const openPaywall = useAppStore((s) => s.openPaywall);
+  const purchasedLimits = useAppStore((s) => s.purchasedLimits);
   const { limits, remaining } = useLimits();
+  const hasPurchasedLimits =
+    purchasedLimits.responses + purchasedLimits.analyses + purchasedLimits.resumes > 0;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
@@ -67,7 +70,9 @@ export function UpgradeCard() {
         <div className="min-w-0">
           <p className="text-base font-extrabold tracking-tight">Пакеты лимитов</p>
           <p className="truncate text-xs text-white/85">
-            Текущий план: Бесплатный
+            {hasPurchasedLimits
+              ? "Активны купленные пакеты"
+              : "Текущий план: Бесплатный"}
           </p>
         </div>
       </div>

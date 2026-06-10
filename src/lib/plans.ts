@@ -17,6 +17,8 @@ export interface Plan {
   note: string;
 }
 
+export type PlanId = Plan["id"];
+
 export const FREE_LIMITS = {
   responses: 10,
   resumes: 3,
@@ -63,6 +65,15 @@ export const PLANS: Plan[] = [
     note: "Больше лимитов за меньшую цену",
   },
 ];
+
+export function getPlanById(value: unknown): Plan | null {
+  if (typeof value !== "string") return null;
+  return PLANS.find((plan) => plan.id === value) ?? null;
+}
+
+export function getPlanAmountKopeks(plan: Plan): number {
+  return Math.round(plan.price * 100);
+}
 
 export const PRO_BENEFITS = [
   "AI-сопроводительное письмо к каждому отклику",

@@ -12,7 +12,13 @@ export interface LimitsState {
 export function useLimits(): LimitsState {
   const quota = useAppStore((s) => s.quota);
   const bonusClaimed = useAppStore((s) => s.proBonusClaimed);
-  const limits = getFreeLimits(bonusClaimed);
+  const purchasedLimits = useAppStore((s) => s.purchasedLimits);
+  const freeLimits = getFreeLimits(bonusClaimed);
+  const limits = {
+    responses: freeLimits.responses + purchasedLimits.responses,
+    analyses: freeLimits.analyses + purchasedLimits.analyses,
+    resumes: freeLimits.resumes + purchasedLimits.resumes,
+  };
   const used = {
     responses: quota.responsesUsed,
     analyses: quota.analysesUsed,

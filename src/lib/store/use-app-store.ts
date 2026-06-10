@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Limits } from "@/lib/plans";
 import type {
   Filters,
   LikedItem,
@@ -99,6 +100,7 @@ interface AppState {
 
   /** Usage counters against the free-plan limits (persisted in localStorage). */
   quota: QuotaUsage;
+  purchasedLimits: Limits;
   consumeResponse: () => void;
   consumeAnalyses: (n: number) => void;
   consumeResume: () => void;
@@ -128,6 +130,12 @@ const EMPTY_QUOTA: QuotaUsage = {
   resumesUsed: 0,
 };
 
+const EMPTY_LIMITS: Limits = {
+  responses: 0,
+  analyses: 0,
+  resumes: 0,
+};
+
 export const useAppStore = create<AppState>()((set, get) => ({
   userId: "",
   setUserId: (id) => set({ userId: id }),
@@ -152,6 +160,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       customLetters: s.customLetters ?? {},
       quota: s.quota ?? EMPTY_QUOTA,
       proBonusClaimed: s.bonusClaimed ?? false,
+      purchasedLimits: s.purchasedLimits ?? EMPTY_LIMITS,
     }),
 
   profile: null,
@@ -309,6 +318,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   quota: EMPTY_QUOTA,
+  purchasedLimits: EMPTY_LIMITS,
   consumeResponse: () => {
     set((state) => ({
       quota: {

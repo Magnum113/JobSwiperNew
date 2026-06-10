@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabase } from "./server";
 import type { HHVacancyItem } from "@/lib/hh/types";
+import type { Limits } from "@/lib/plans";
 import type {
   ResumeProfile,
   Filters,
@@ -370,6 +371,7 @@ export interface LoadedState {
   customLetters: Record<string, CustomLetter>;
   quota: QuotaUsage;
   bonusClaimed: boolean;
+  purchasedLimits: Limits;
 }
 
 /** Persist usage counters + bonus flag on the user's account row. */
@@ -502,5 +504,6 @@ export async function loadState(userId: string): Promise<LoadedState> {
     customLetters,
     quota,
     bonusClaimed,
+    purchasedLimits: { responses: 0, analyses: 0, resumes: 0 },
   };
 }
