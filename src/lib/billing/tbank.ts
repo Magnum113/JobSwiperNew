@@ -50,10 +50,10 @@ export class TbankError extends Error {
 export function getTbankConfig() {
   const terminalKey =
     process.env.TBANK_TERMINAL_KEY?.trim() ??
-    process.env.TEST_TERMINAL_KEY?.trim();
+    process.env.TERMINAL_KEY?.trim();
   const password =
     process.env.TBANK_TERMINAL_PASSWORD?.trim() ??
-    process.env.TEST_TERMINAL_PASSWORD?.trim();
+    process.env.TERMINAL_PASSWORD?.trim();
   const apiUrl = (process.env.TBANK_API_URL ?? DEFAULT_API_URL).replace(
     /\/$/,
     "",
@@ -61,7 +61,7 @@ export function getTbankConfig() {
 
   if (!terminalKey || !password) {
     throw new Error(
-      "T-Bank acquiring is not configured: set TBANK_TERMINAL_KEY/TBANK_TERMINAL_PASSWORD or TEST_TERMINAL_KEY/TEST_TERMINAL_PASSWORD",
+      "T-Bank acquiring is not configured: set TBANK_TERMINAL_KEY/TBANK_TERMINAL_PASSWORD or TERMINAL_KEY/TERMINAL_PASSWORD",
     );
   }
 

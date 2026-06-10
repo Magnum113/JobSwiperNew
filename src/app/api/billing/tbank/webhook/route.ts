@@ -5,6 +5,7 @@ import {
   grantEntitlementForOrder,
   mapTbankStatusToOrderStatus,
   markBillingOrderFromNotification,
+  revokeEntitlementForOrder,
 } from "@/lib/billing/orders";
 import {
   isTbankConfirmedPayment,
@@ -75,6 +76,23 @@ export async function POST(req: Request) {
 
     const status = mapTbankStatusToOrderStatus(payload);
     await markBillingOrderFromNotification(order.id, payload, status);
+
+    console.info("[billing:tbank-webhook] notification processed", {
+      orderId: order.id,
+      paymentId: payload.PaymentId,
+      tbankStatus: payload.Status,
+      mappedStatus: status,
+      errorCode: payload.ErrorCode,
+      amount: payload.Amount,
+    });
+
+    if (status === "refunded") {
+      await revokeEntitlementForOrder(order.id);
+      console.info("[billing:tbank-webhook] entitlement revoked", {
+        orderId: order.id,
+      });
+      return ok();
+    }
 
     if (!isTbankConfirmedPayment(payload)) {
       return ok();

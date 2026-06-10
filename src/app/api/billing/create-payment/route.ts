@@ -52,6 +52,14 @@ export async function POST(req: Request) {
       rawPayload: payment.raw,
     });
 
+    console.info("[billing:create-payment] payment initialized", {
+      orderId: order.id,
+      paymentId: payment.paymentId,
+      planId: plan.id,
+      amount: order.amount,
+      userId,
+    });
+
     return NextResponse.json({
       orderId: order.id,
       paymentId: payment.paymentId,

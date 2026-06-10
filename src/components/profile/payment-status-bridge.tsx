@@ -70,7 +70,24 @@ export function PaymentStatusBridge() {
             return;
           }
 
-          if (status === "failed" || status === "canceled" || status === "rejected") {
+          if (status === "refunded") {
+            trackGoal(ANALYTICS_GOALS.paymentFail, {
+              order_id: confirmedOrderId,
+              status,
+            });
+            toast.error("Платёж возвращён", {
+              id: "payment-status",
+              description:
+                "Банк прислал статус возврата. Для успешного теста используйте карту с успешным сценарием оплаты.",
+            });
+            return;
+          }
+
+          if (
+            status === "failed" ||
+            status === "canceled" ||
+            status === "rejected"
+          ) {
             trackGoal(ANALYTICS_GOALS.paymentFail, {
               order_id: confirmedOrderId,
               status,

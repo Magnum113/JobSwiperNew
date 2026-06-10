@@ -22,6 +22,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
     }
 
+    console.info("[billing:order] status checked", {
+      orderId: order.id,
+      status: order.status,
+      paidAt: order.paid_at,
+    });
+
     return NextResponse.json({
       orderId: order.id,
       planId: order.plan_id,

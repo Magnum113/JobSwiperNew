@@ -8,6 +8,7 @@ export type BillingOrderStatus =
   | "created"
   | "payment_initialized"
   | "confirmed"
+  | "refunded"
   | "failed"
   | "canceled"
   | "rejected"
@@ -136,6 +137,8 @@ export function mapTbankStatusToOrderStatus(
       return "canceled";
     case "REJECTED":
       return "rejected";
+    case "REFUNDED":
+      return "refunded";
     case "DEADLINE_EXPIRED":
       return "failed";
     default:
@@ -185,6 +188,15 @@ export async function grantEntitlementForOrder(
       { onConflict: "order_id", ignoreDuplicates: true },
     );
 
+  if (error) throw new Error(error.message);
+}
+
+export async function revokeEntitlementForOrder(orderId: string): Promise<void> {
+  const sb = getSupabaseAdmin();
+  const { error } = await sb
+    .from("user_entitlements")
+    .delete()
+    .eq("order_id", orderId);
   if (error) throw new Error(error.message);
 }
 
