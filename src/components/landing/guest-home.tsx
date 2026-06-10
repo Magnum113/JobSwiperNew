@@ -15,7 +15,11 @@ import {
 import { BrandMark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 
-const proofPoints = ["PDF/DOCX резюме", "ИИ-оценка совпадения", "Письмо под вакансию"];
+const proofPoints = [
+  "Лучшие вакансии первыми",
+  "ИИ-подбор под ваше резюме",
+  "Письмо под вакансию",
+];
 
 const benefits = [
   {
