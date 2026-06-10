@@ -9,6 +9,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import { GuestHome } from "@/components/landing/guest-home";
 import { ProButton } from "@/components/paywall/pro-button";
 import { FiltersSheet } from "@/components/filters/filters-sheet";
 import { SwipeDeck } from "@/components/swipe/swipe-deck";
@@ -27,7 +28,6 @@ import {
   countSupply,
   decidePrefetch,
   pickRefillVariant,
-  AUTO_PAGE_BUDGET,
   type RefillVariant,
 } from "@/lib/deck-supply";
 import type { HHVacancyItem } from "@/lib/hh/types";
@@ -47,6 +47,8 @@ function DeckSkeleton() {
 
 export default function HomePage() {
   const hydrated = useAppStore((s) => s.hydrated);
+  const authUser = useAppStore((s) => s.authUser);
+  const authChecked = useAppStore((s) => s.authChecked);
   const profile = useAppStore((s) => s.profile);
   const filters = useAppStore((s) => s.filters);
   const seen = useAppStore((s) => s.seen);
@@ -62,7 +64,7 @@ export default function HomePage() {
   const feedLoadedKeyRef = useRef<string | null>(null);
   const feedErrorKeyRef = useRef<string | null>(null);
 
-  const enabled = hydrated && !!profile;
+  const enabled = hydrated && authChecked && !!authUser && !!profile;
 
   const {
     data,
@@ -122,12 +124,14 @@ export default function HomePage() {
   // filters change, or the user explicitly asks for more.
   const autoBudgetRef = useRef(0);
   const prevUsableRef = useRef(0);
-  const [autoExhausted, setAutoExhausted] = useState(false);
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const [autoExhaustedKey, setAutoExhaustedKey] = useState<string | null>(null);
+  const autoExhausted = autoExhaustedKey === filtersKey;
 
   useEffect(() => {
     if (counts.usableReady > prevUsableRef.current) {
       autoBudgetRef.current = 0;
-      setAutoExhausted(false);
+      setAutoExhaustedKey(null);
     }
     prevUsableRef.current = counts.usableReady;
   }, [counts.usableReady]);
@@ -135,7 +139,6 @@ export default function HomePage() {
   // Fresh filters → fresh search budget.
   useEffect(() => {
     autoBudgetRef.current = 0;
-    setAutoExhausted(false);
   }, [filters]);
 
   // Keep the deck stocked with scored, usable matches.
@@ -152,12 +155,13 @@ export default function HomePage() {
       if (decision.consumeBudget) autoBudgetRef.current += 1;
       fetchNextPage();
     } else if (decision.exhaustBudget) {
-      setAutoExhausted(true); // tried enough pages; hand control to the user
+      setAutoExhaustedKey(filtersKey); // tried enough pages; hand control to the user
     }
   }, [
     deckItems.length,
     counts,
     canScoreMore,
+    filtersKey,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
@@ -165,7 +169,7 @@ export default function HomePage() {
 
   const handleLoadMore = () => {
     autoBudgetRef.current = 0;
-    setAutoExhausted(false);
+    setAutoExhaustedKey(null);
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   };
 
@@ -247,6 +251,10 @@ export default function HomePage() {
   const [selected, setSelected] = useState<HHVacancyItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  if (hydrated && authChecked && !authUser) {
+    return <GuestHome />;
+  }
+
   const handleSwipe = (vacancy: HHVacancyItem, dir: SwipeDirection) => {
     if (dir === "right") {
       if (remaining.responses <= 0) {
@@ -277,7 +285,7 @@ export default function HomePage() {
 
   let body: React.ReactNode;
 
-  if (!hydrated) {
+  if (!hydrated || !authChecked) {
     body = <DeckSkeleton />;
   } else if (!profile) {
     body = (

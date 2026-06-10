@@ -154,163 +154,167 @@ export function PaywallDialog() {
       <Dialog open={open} onOpenChange={(o) => !o && closePaywall()}>
         <DialogContent
           showCloseButton={false}
-          className="max-w-[26rem] gap-0 overflow-hidden p-0"
+          className="flex max-h-[calc(100dvh-1rem)] max-w-[26rem] grid-rows-none flex-col gap-0 overflow-hidden p-0"
         >
-        {/* Hero */}
-        <div className="relative bg-gradient-brand px-6 pb-7 pt-7 text-white">
-          <DialogClose
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute right-3 top-3 text-white/80 hover:bg-white/15 hover:text-white"
-              />
-            }
-          >
-            <X />
-            <span className="sr-only">Закрыть</span>
-          </DialogClose>
+          {/* Hero */}
+          <div className="relative shrink-0 bg-gradient-brand px-5 pb-5 pt-5 text-white sm:px-6 sm:pb-7 sm:pt-7">
+            <DialogClose
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute right-3 top-3 text-white/80 hover:bg-white/15 hover:text-white"
+                />
+              }
+            >
+              <X />
+              <span className="sr-only">Закрыть</span>
+            </DialogClose>
 
-          <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-white/15 shadow-sm ring-1 ring-white/25">
-            <Crown className="size-6 fill-white/40" />
-          </span>
-          <DialogTitle className="mt-3 text-2xl font-extrabold tracking-tight text-white">
-            Пакеты лимитов
-          </DialogTitle>
-          <DialogDescription className="mt-1 text-sm text-white/85">
-            Купите разовый пакет откликов, анализов вакансий и разборов резюме
-            без подписки и автопродления.
-          </DialogDescription>
-        </div>
+            <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-white/15 shadow-sm ring-1 ring-white/25 sm:size-11">
+              <Crown className="size-5 fill-white/40 sm:size-6" />
+            </span>
+            <DialogTitle className="mt-3 text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+              Пакеты лимитов
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-sm leading-snug text-white/85">
+              Купите разовый пакет откликов, анализов вакансий и разборов
+              резюме без подписки и автопродления.
+            </DialogDescription>
+          </div>
 
-        {/* Benefits */}
-        <div className="space-y-2.5 px-6 pt-5">
-          {PRO_BENEFITS.map((b) => (
-            <div key={b} className="flex items-start gap-2.5">
-              <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Check className="size-3.5" strokeWidth={3} />
-              </span>
-              <span className="text-sm leading-snug text-foreground/90">{b}</span>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {/* Benefits */}
+            <div className="space-y-2 px-5 pt-4 sm:space-y-2.5 sm:px-6 sm:pt-5">
+              {PRO_BENEFITS.map((b) => (
+                <div key={b} className="flex items-start gap-2.5">
+                  <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Check className="size-3.5" strokeWidth={3} />
+                  </span>
+                  <span className="text-sm leading-snug text-foreground/90">
+                    {b}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Plan selector */}
-        <div className="grid grid-cols-2 gap-2.5 px-6 pt-5">
-          {PLANS.map((p) => {
-            const active = p.id === planId;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPlanId(p.id)}
-                className={cn(
-                  "relative flex flex-col rounded-2xl border-2 p-3.5 text-left transition-all",
-                  active
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-border/70 bg-card hover:border-border",
-                )}
+            {/* Plan selector */}
+            <div className="grid grid-cols-2 gap-2.5 px-5 pt-4 sm:px-6 sm:pt-5">
+              {PLANS.map((p) => {
+                const active = p.id === planId;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPlanId(p.id)}
+                    className={cn(
+                      "relative flex min-h-[8.75rem] flex-col rounded-2xl border-2 p-3 text-left transition-all sm:p-3.5",
+                      active
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border/70 bg-card hover:border-border",
+                    )}
+                  >
+                    {p.badge && (
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                        {p.badge}
+                      </span>
+                    )}
+                    <span className="text-sm font-semibold">{p.name}</span>
+                    <span className="mt-1 flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold tracking-tight">
+                        {p.price}
+                      </span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        ₽
+                      </span>
+                    </span>
+                    <span className="mt-1 text-xs leading-snug text-muted-foreground">
+                      {p.note}
+                    </span>
+                    <span
+                      className={cn(
+                        "mt-auto inline-flex size-5 items-center justify-center self-end rounded-full border-2 transition-colors",
+                        active
+                          ? "border-primary bg-primary text-white"
+                          : "border-border",
+                      )}
+                    >
+                      {active && <Check className="size-3" strokeWidth={3} />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* What you get on the chosen plan */}
+            <div className="mx-5 mb-4 mt-4 flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2 text-[11px] text-muted-foreground sm:mx-6 sm:px-3.5 sm:py-2.5 sm:text-xs">
+              <span>
+                <b className="text-foreground">{plan.responses}</b> откликов
+              </span>
+              <span className="text-border">·</span>
+              <span>
+                <b className="text-foreground">{plan.analyses}</b> анализов
+              </span>
+              <span className="text-border">·</span>
+              <span>
+                <b className="text-foreground">{plan.resumes}</b> резюме
+              </span>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="shrink-0 border-t border-border/60 bg-card px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6 sm:pt-4">
+            <Button
+              size="lg"
+              onClick={handlePay}
+              disabled={paying || !authChecked}
+              className="h-12 w-full rounded-xl bg-gradient-brand text-base font-semibold text-white shadow-sm transition-transform hover:scale-[1.01] hover:opacity-95"
+            >
+              <Sparkles className="size-4 fill-white/40" />
+              {paying ? "Открываем оплату" : `Купить пакет за ${plan.price} ₽`}
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Разовая покупка · Безопасная оплата
+            </p>
+            <p className="mt-1.5 max-h-11 overflow-y-auto text-center text-[11px] leading-4 text-muted-foreground sm:max-h-none sm:overflow-visible">
+              Нажимая «Купить пакет», вы соглашаетесь с{" "}
+              <Link
+                href="/legal/offer"
+                className="underline-offset-4 hover:text-foreground hover:underline"
               >
-                {p.badge && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                    {p.badge}
-                  </span>
-                )}
-                <span className="text-sm font-semibold">{p.name}</span>
-                <span className="mt-1 flex items-baseline gap-1">
-                  <span className="text-2xl font-extrabold tracking-tight">
-                    {p.price}
-                  </span>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    ₽
-                  </span>
-                </span>
-                <span className="mt-1 text-xs text-muted-foreground">
-                  {p.note}
-                </span>
-                <span
-                  className={cn(
-                    "mt-2.5 inline-flex size-5 items-center justify-center self-end rounded-full border-2 transition-colors",
-                    active
-                      ? "border-primary bg-primary text-white"
-                      : "border-border",
-                  )}
-                >
-                  {active && <Check className="size-3" strokeWidth={3} />}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* What you get on the chosen plan */}
-        <div className="mx-6 mt-4 flex items-center justify-between rounded-xl bg-muted/60 px-3.5 py-2.5 text-xs text-muted-foreground">
-          <span>
-            <b className="text-foreground">{plan.responses}</b> откликов
-          </span>
-          <span className="text-border">·</span>
-          <span>
-            <b className="text-foreground">{plan.analyses}</b> анализов
-          </span>
-          <span className="text-border">·</span>
-          <span>
-            <b className="text-foreground">{plan.resumes}</b> резюме
-          </span>
-        </div>
-
-        {/* CTA */}
-        <div className="px-6 pb-6 pt-4">
-          <Button
-            size="lg"
-            onClick={handlePay}
-            disabled={paying || !authChecked}
-            className="h-12 w-full rounded-xl bg-gradient-brand text-base font-semibold text-white shadow-sm transition-transform hover:scale-[1.01] hover:opacity-95"
-          >
-            <Sparkles className="size-4 fill-white/40" />
-            {paying ? "Открываем оплату" : `Купить пакет за ${plan.price} ₽`}
-          </Button>
-          <p className="mt-2.5 text-center text-xs text-muted-foreground">
-            Разовая покупка · Безопасная оплата
-          </p>
-          <p className="mt-2 text-center text-[11px] leading-4 text-muted-foreground">
-            Нажимая «Купить пакет», вы соглашаетесь с{" "}
-            <Link
-              href="/legal/offer"
-              className="underline-offset-4 hover:text-foreground hover:underline"
-            >
-              офертой
-            </Link>
-            ,{" "}
-            <Link
-              href="/legal/privacy"
-              className="underline-offset-4 hover:text-foreground hover:underline"
-            >
-              политикой конфиденциальности
-            </Link>
-            ,{" "}
-            <Link
-              href="/legal/personal-data"
-              className="underline-offset-4 hover:text-foreground hover:underline"
-            >
-              обработкой персональных данных
-            </Link>{" "}
-            и{" "}
-            <Link
-              href="/legal/refund"
-              className="underline-offset-4 hover:text-foreground hover:underline"
-            >
-              условиями возврата
-            </Link>
-            .
-          </p>
-        </div>
+                офертой
+              </Link>
+              ,{" "}
+              <Link
+                href="/legal/privacy"
+                className="underline-offset-4 hover:text-foreground hover:underline"
+              >
+                политикой конфиденциальности
+              </Link>
+              ,{" "}
+              <Link
+                href="/legal/personal-data"
+                className="underline-offset-4 hover:text-foreground hover:underline"
+              >
+                обработкой персональных данных
+              </Link>{" "}
+              и{" "}
+              <Link
+                href="/legal/refund"
+                className="underline-offset-4 hover:text-foreground hover:underline"
+              >
+                условиями возврата
+              </Link>
+              .
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
         <DialogContent
           showCloseButton={false}
-          className="max-w-[24rem] gap-0 overflow-hidden p-0"
+          className="max-h-[calc(100dvh-1rem)] max-w-[24rem] gap-0 overflow-y-auto p-0"
         >
           <div className="relative bg-gradient-brand px-6 pb-6 pt-6 text-white">
             <DialogClose

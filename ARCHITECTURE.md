@@ -122,7 +122,7 @@ src/
 │   ├── layout.tsx            # корневой layout: шрифты, Providers, контейнер, нижняя навигация
 │   ├── providers.tsx         # ThemeProvider + QueryClientProvider + Toaster
 │   ├── globals.css           # токены темы (oklch) + кастомные утилиты
-│   ├── page.tsx              # ГЛАВНАЯ — лента-свайпер
+│   ├── page.tsx              # ГЛАВНАЯ — guest-экран или лента-свайпер
 │   ├── liked/page.tsx        # ОТКЛИКИ — лайки + письма под свои вакансии
 │   ├── profile/page.tsx      # КАБИНЕТ — резюме, авторизация, тема
 │   └── api/                  # серверные роуты (прокси к hh.ru и AITunnel)
@@ -139,6 +139,7 @@ src/
 ├── components/
 │   ├── auth-code-bridge.tsx  # страховка для OAuth code, пришедшего не на callback path
 │   ├── ui/                   # сгенерированные shadcn-примитивы (Base UI)
+│   ├── landing/guest-home.tsx # первый экран для неавторизованных пользователей
 │   ├── layout/bottom-nav.tsx # плавающая нижняя навигация (3 вкладки + бейдж)
 │   ├── swipe/
 │   │   ├── swipe-deck.tsx     # колода: drag, штампы LIKE/NOPE, кнопки, стрелки
@@ -198,6 +199,32 @@ src/
 
 Конфиги в корне: `next.config.ts`, `components.json` (shadcn), `tsconfig.json`,
 `postcss.config.mjs`, `eslint.config.mjs`. `.claude/launch.json` — для dev-превью.
+
+---
+
+## 4.1. Главная страница и guest-экран
+
+`src/app/page.tsx` работает в двух режимах:
+
+1. **Неавторизованный пользователь** (`authChecked === true`, `authUser === null`) —
+   вместо ленты рендерится `src/components/landing/guest-home.tsx`.
+2. **Авторизованный пользователь** — остаётся рабочий сценарий приложения:
+   если резюме ещё нет, показывается CTA в кабинет; если резюме есть, загружается
+   лента вакансий.
+
+Это сделано намеренно: гостю не нужно запускать запросы к hh.ru и расчёт матчей,
+пока он не вошёл в аккаунт и не добавил резюме. Поэтому флаг `enabled` для
+`useVacancies()` теперь требует сразу четыре условия:
+
+```
+hydrated && authChecked && !!authUser && !!profile
+```
+
+Guest-экран следует product-led SaaS-паттерну: короткий value proposition,
+один основной CTA в кабинет, proof chips и визуальное превью продукта с карточкой
+вакансии, AI-оценкой и примером сопроводительного письма. Это не отдельный
+маркетинговый сайт: он живёт внутри текущего app-shell и ведёт пользователя к
+первому практическому действию — авторизации и загрузке резюме.
 
 ---
 
