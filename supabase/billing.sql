@@ -51,3 +51,29 @@ create policy "user_entitlements_select_own"
   for select
   to authenticated
   using (auth.uid() = user_id);
+
+create table if not exists public.billing_events (
+  id text primary key,
+  order_id text references public.billing_orders(id) on delete set null,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists billing_events_order_id_created_at_idx
+  on public.billing_events(order_id, created_at desc);
+
+alter table public.billing_events enable row level security;
+
+create policy "billing_events_select_own"
+  on public.billing_events
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.billing_orders o
+      where o.id = billing_events.order_id
+        and o.user_id = auth.uid()
+    )
+  );

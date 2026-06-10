@@ -500,6 +500,9 @@ RLS включён на всех таблицах. API-роуты теперь a
   статус, `PaymentId`, платёжная ссылка и последний raw-payload банка;
 - `user_entitlements` — купленные лимиты пользователя, привязанные к заказу,
   срок действия пакета — 12 месяцев.
+- `billing_events` — технический журнал платежей: webhook-и T-Bank, результаты
+  `GetState`, `Confirm`, ручные repair-события. Таблица нужна для production-
+  диагностики, когда Vercel logs недоступны или уже ротированы.
 
 Обе таблицы находятся в `public`, поэтому в SQL включён RLS. Серверные payment API
 работают через `getSupabaseAdmin()` и требуют `SUPABASE_SERVICE_ROLE_KEY`; этот ключ
@@ -515,9 +518,12 @@ RLS включён на всех таблицах. API-роуты теперь a
    `paymentUrl`.
 4. Paywall переводит пользователя на `paymentUrl`; `SuccessURL` и `FailURL`
    возвращают его в `/profile?payment=...&orderId=...`.
-5. `PaymentStatusBridge` на странице профиля вызывает `GET /api/billing/order`
-   и после `confirmed` заново загружает `/api/db/state`, чтобы в UI появились
-   купленные лимиты.
+5. `PaymentStatusBridge` на странице профиля вызывает `GET /api/billing/order`.
+   Этот endpoint не только читает БД, но и для незавершённых заказов сверяет
+   статус в T-Bank через `/v2/GetState`. Если T-Bank возвращает `AUTHORIZED`,
+   backend вызывает `/v2/Confirm`, чтобы завершить двухстадийную оплату.
+   После `confirmed` профиль заново загружает `/api/db/state`, чтобы в UI
+   появились купленные лимиты.
 6. T-Bank отправляет уведомление в `POST /api/billing/tbank/webhook`.
 7. Webhook проверяет SHA-256 `Token`, ищет заказ, сверяет сумму и выдаёт лимиты
    только при финальном статусе `CONFIRMED`.
@@ -526,6 +532,12 @@ RLS включён на всех таблицах. API-роуты теперь a
 9. Если T-Bank позже присылает `REFUNDED`, заказ получает статус `refunded`,
    а entitlement по этому `order_id` удаляется. Это важно для тестовых сценариев
    банка и реальных возвратов.
+
+Статусы нельзя безусловно перетирать в порядке прихода webhook-ов: T-Bank может
+прислать `CONFIRMED`, а затем более ранний по смыслу `AUTHORIZED`. Поэтому
+webhook сохраняет `confirmed`, если новый статус не `REFUNDED`; иначе UI может
+увидеть `unknown/authorized` после уже успешного начисления и зависнуть на
+«Платёж обрабатывается».
 
 Переменные окружения для эквайринга:
 - `TBANK_TERMINAL_KEY` / `TBANK_TERMINAL_PASSWORD` — production;

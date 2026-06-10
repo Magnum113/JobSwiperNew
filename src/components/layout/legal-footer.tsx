@@ -14,6 +14,12 @@ export function LegalFooter() {
             {link.label}
           </Link>
         ))}
+        <a
+          href={`mailto:${SELLER.email}`}
+          className="underline-offset-4 hover:text-foreground hover:underline"
+        >
+          Поддержка
+        </a>
       </nav>
       <p className="mt-2">
         {SELLER.shortName}, ИНН {SELLER.inn}, ОГРНИП {SELLER.ogrnip}

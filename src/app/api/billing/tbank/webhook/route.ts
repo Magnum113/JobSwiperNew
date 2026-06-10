@@ -3,12 +3,16 @@ import { getPlanAmountKopeks, getPlanById } from "@/lib/plans";
 import {
   findBillingOrderByNotification,
   grantEntitlementForOrder,
+  logBillingEvent,
   mapTbankStatusToOrderStatus,
   markBillingOrderFromNotification,
+  markBillingOrderStatus,
   revokeEntitlementForOrder,
 } from "@/lib/billing/orders";
 import {
+  confirmTbankPayment,
   isTbankConfirmedPayment,
+  isTbankAuthorizedPayment,
   TBANK_SUCCESS_RESPONSE,
   type TbankNotificationPayload,
   verifyTbankNotificationToken,
@@ -75,6 +79,27 @@ export async function POST(req: Request) {
     }
 
     const status = mapTbankStatusToOrderStatus(payload);
+
+    await logBillingEvent(order.id, "tbank_webhook_received", {
+      tbankStatus: payload.Status,
+      mappedStatus: status,
+      paymentId: payload.PaymentId,
+      success: payload.Success,
+      errorCode: payload.ErrorCode,
+      amount: payload.Amount,
+      previousStatus: order.status,
+    });
+
+    if (order.status === "confirmed" && status !== "refunded") {
+      console.info("[billing:tbank-webhook] final status preserved", {
+        orderId: order.id,
+        previousStatus: order.status,
+        tbankStatus: payload.Status,
+        mappedStatus: status,
+      });
+      return ok();
+    }
+
     await markBillingOrderFromNotification(order.id, payload, status);
 
     console.info("[billing:tbank-webhook] notification processed", {
@@ -88,9 +113,53 @@ export async function POST(req: Request) {
 
     if (status === "refunded") {
       await revokeEntitlementForOrder(order.id);
+      await logBillingEvent(order.id, "entitlement_revoked", {
+        reason: "refunded",
+        paymentId: payload.PaymentId,
+      });
       console.info("[billing:tbank-webhook] entitlement revoked", {
         orderId: order.id,
       });
+      return ok();
+    }
+
+    if (isTbankAuthorizedPayment(payload)) {
+      const plan = getPlanById(order.plan_id);
+      if (!plan) {
+        console.error("[billing:tbank-webhook] unknown plan", {
+          orderId: order.id,
+          planId: order.plan_id,
+        });
+        return NextResponse.json({ error: "Unknown plan" }, { status: 400 });
+      }
+      const paymentId = String(payload.PaymentId ?? order.tbank_payment_id ?? "");
+      if (!paymentId) {
+        return NextResponse.json({ error: "Missing PaymentId" }, { status: 400 });
+      }
+      const confirm = await confirmTbankPayment(paymentId, order.amount);
+      await logBillingEvent(order.id, "tbank_confirm_result", {
+        paymentId,
+        status: confirm.status,
+        success: confirm.success,
+        errorCode: confirm.errorCode,
+      });
+      if (confirm.success && confirm.status === "CONFIRMED") {
+        const planAmount = getPlanAmountKopeks(plan);
+        if (order.amount !== planAmount) {
+          console.error("[billing:tbank-webhook] amount mismatch after confirm", {
+            orderId: order.id,
+            orderAmount: order.amount,
+            planAmount,
+          });
+          return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
+        }
+        await markBillingOrderStatus(order.id, {
+          status: "confirmed",
+          rawPayload: confirm.raw,
+          paidAt: new Date().toISOString(),
+        });
+        await grantEntitlementForOrder(order, plan);
+      }
       return ok();
     }
 

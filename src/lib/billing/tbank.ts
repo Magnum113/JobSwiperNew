@@ -23,6 +23,14 @@ export interface TbankInitPaymentResult {
   raw: Record<string, unknown>;
 }
 
+export interface TbankPaymentOperationResult {
+  paymentId: string;
+  status: string;
+  success: boolean;
+  errorCode: string;
+  raw: Record<string, unknown>;
+}
+
 export interface TbankNotificationPayload {
   TerminalKey?: string;
   OrderId?: string;
@@ -146,6 +154,58 @@ export async function initTbankPayment(
   };
 }
 
+async function postTbankOperation(
+  path: "GetState" | "Confirm",
+  payload: Record<string, TbankScalar>,
+): Promise<TbankPaymentOperationResult> {
+  const { password, apiUrl } = getTbankConfig();
+  const response = await fetch(`${apiUrl}/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...payload,
+      Token: createTbankToken(payload, password),
+    }),
+  });
+  const data = (await response.json().catch(() => null)) as
+    | Record<string, unknown>
+    | null;
+
+  if (!response.ok || !data) {
+    throw new TbankError(`T-Bank ${path} request failed`, data);
+  }
+
+  return {
+    paymentId: String(data.PaymentId ?? payload.PaymentId),
+    status: String(data.Status ?? "UNKNOWN"),
+    success: data.Success === true,
+    errorCode: String(data.ErrorCode ?? ""),
+    raw: data,
+  };
+}
+
+export async function getTbankPaymentState(
+  paymentId: string,
+): Promise<TbankPaymentOperationResult> {
+  const { terminalKey } = getTbankConfig();
+  return postTbankOperation("GetState", {
+    TerminalKey: terminalKey,
+    PaymentId: paymentId,
+  });
+}
+
+export async function confirmTbankPayment(
+  paymentId: string,
+  amount: number,
+): Promise<TbankPaymentOperationResult> {
+  const { terminalKey } = getTbankConfig();
+  return postTbankOperation("Confirm", {
+    TerminalKey: terminalKey,
+    PaymentId: paymentId,
+    Amount: amount,
+  });
+}
+
 export function verifyTbankNotificationToken(
   payload: TbankNotificationPayload,
 ): boolean {
@@ -167,6 +227,17 @@ export function isTbankConfirmedPayment(
   return (
     success &&
     payload.Status === "CONFIRMED" &&
+    String(payload.ErrorCode ?? "0") === "0"
+  );
+}
+
+export function isTbankAuthorizedPayment(
+  payload: TbankNotificationPayload,
+): boolean {
+  const success = payload.Success === true || payload.Success === "true";
+  return (
+    success &&
+    payload.Status === "AUTHORIZED" &&
     String(payload.ErrorCode ?? "0") === "0"
   );
 }

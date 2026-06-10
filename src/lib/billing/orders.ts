@@ -7,6 +7,7 @@ import type { TbankNotificationPayload } from "./tbank";
 export type BillingOrderStatus =
   | "created"
   | "payment_initialized"
+  | "authorized"
   | "confirmed"
   | "refunded"
   | "failed"
@@ -26,6 +27,27 @@ export interface BillingOrderRow {
   created_at: string;
   updated_at: string;
   paid_at: string | null;
+}
+
+export async function logBillingEvent(
+  orderId: string | null,
+  eventType: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  const sb = getSupabaseAdmin();
+  const { error } = await sb.from("billing_events").insert({
+    id: randomUUID(),
+    order_id: orderId,
+    event_type: eventType,
+    payload,
+  });
+  if (error) {
+    console.warn("[billing:event-log-failed]", {
+      orderId,
+      eventType,
+      error: error.message,
+    });
+  }
 }
 
 export async function createBillingOrder(
@@ -131,6 +153,9 @@ export function mapTbankStatusToOrderStatus(
   if (success && payload.Status === "CONFIRMED") {
     return "confirmed";
   }
+  if (success && payload.Status === "AUTHORIZED") {
+    return "authorized";
+  }
 
   switch (payload.Status) {
     case "CANCELED":
@@ -162,6 +187,29 @@ export async function markBillingOrderFromNotification(
     })
     .eq("id", orderId);
 
+  if (error) throw new Error(error.message);
+}
+
+export async function markBillingOrderStatus(
+  orderId: string,
+  input: {
+    status: BillingOrderStatus;
+    rawPayload?: Record<string, unknown>;
+    paidAt?: string | null;
+  },
+): Promise<void> {
+  const sb = getSupabaseAdmin();
+  const patch: Record<string, unknown> = {
+    status: input.status,
+    updated_at: new Date().toISOString(),
+  };
+  if (input.rawPayload) patch.raw_payload = input.rawPayload;
+  if (input.paidAt !== undefined) patch.paid_at = input.paidAt;
+
+  const { error } = await sb
+    .from("billing_orders")
+    .update(patch)
+    .eq("id", orderId);
   if (error) throw new Error(error.message);
 }
 
