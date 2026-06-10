@@ -16,15 +16,15 @@ import type { LimitKind } from "@/lib/store/use-app-store";
 const COPY: Record<LimitKind, { title: string; text: string }> = {
   responses: {
     title: "Отклики закончились",
-    text: "Вы использовали все доступные отклики на бесплатном плане. Оформите подписку, чтобы продолжить откликаться.",
+    text: "Вы использовали все доступные отклики на бесплатном плане. Купите пакет лимитов, чтобы продолжить откликаться.",
   },
   analyses: {
     title: "Анализы вакансий закончились",
-    text: "Лимит ИИ-оценки вакансий на бесплатном плане исчерпан. Подписка снимает ограничение.",
+    text: "Лимит ИИ-оценки вакансий на бесплатном плане исчерпан. Купите пакет, чтобы получить больше анализов.",
   },
   resumes: {
     title: "Лимит анализов резюме исчерпан",
-    text: "Вы использовали все анализы резюме на бесплатном плане. Оформите подписку, чтобы анализировать больше резюме.",
+    text: "Вы использовали все анализы резюме на бесплатном плане. Купите пакет лимитов, чтобы анализировать больше резюме.",
   },
 };
 
@@ -62,7 +62,7 @@ export function LimitReachedDialog() {
           </DialogTitle>
           <DialogDescription className="text-sm leading-snug">
             {copy?.text ??
-              "Лимит на бесплатном плане исчерпан. Оформите подписку, чтобы продолжить."}
+              "Лимит на бесплатном плане исчерпан. Купите пакет лимитов, чтобы продолжить."}
           </DialogDescription>
         </div>
 
@@ -72,7 +72,7 @@ export function LimitReachedDialog() {
             className="h-11 w-full rounded-xl bg-gradient-brand text-sm font-semibold text-white shadow-sm transition-transform hover:scale-[1.01] hover:opacity-95"
           >
             <Crown className="size-4 fill-white/40" />
-            Оформить подписку
+            Купить пакет
           </Button>
           <DialogClose
             render={

@@ -11,6 +11,7 @@ const VALID_EXP = [
   "between3And6",
   "moreThan6",
 ];
+const VALID_SENIORITY = ["Стажёр", "Junior", "Middle", "Senior", "Lead"];
 
 interface ParsedResume {
   title?: string;
@@ -18,6 +19,23 @@ interface ParsedResume {
   seniority?: string;
   summary?: string;
   experienceId?: string;
+}
+
+function cleanText(value: unknown, max: number): string {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+
+  const sliced = text.slice(0, max + 1);
+  const lastBoundary = Math.max(
+    sliced.lastIndexOf("."),
+    sliced.lastIndexOf("!"),
+    sliced.lastIndexOf("?"),
+    sliced.lastIndexOf(";"),
+    sliced.lastIndexOf(","),
+    sliced.lastIndexOf(" "),
+  );
+  const clean = sliced.slice(0, lastBoundary > max * 0.6 ? lastBoundary : max);
+  return clean.replace(/[,\s;:.!?]+$/, "").trim() + "…";
 }
 
 export async function POST(req: Request) {
@@ -58,12 +76,15 @@ export async function POST(req: Request) {
     const experienceId = VALID_EXP.includes(String(parsed.experienceId))
       ? String(parsed.experienceId)
       : "between1And3";
+    const seniority = VALID_SENIORITY.includes(String(parsed.seniority))
+      ? String(parsed.seniority)
+      : "";
 
     return NextResponse.json({
-      title: String(parsed.title ?? "").trim().slice(0, 80),
-      skills,
-      seniority: String(parsed.seniority ?? "").trim().slice(0, 20),
-      summary: String(parsed.summary ?? "").trim().slice(0, 240),
+      title: cleanText(parsed.title, 80),
+      skills: skills.map((skill) => cleanText(skill, 80)).filter(Boolean),
+      seniority,
+      summary: cleanText(parsed.summary, 200),
       experienceId,
     });
   } catch (err) {

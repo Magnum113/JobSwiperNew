@@ -53,7 +53,7 @@ function LimitRow({
   );
 }
 
-/** Subscription block in the profile: current plan limits + upgrade CTA. */
+/** Limit block in the profile: current remaining limits + purchase CTA. */
 export function UpgradeCard() {
   const openPaywall = useAppStore((s) => s.openPaywall);
   const { limits, remaining } = useLimits();
@@ -65,7 +65,7 @@ export function UpgradeCard() {
           <Crown className="size-5 fill-white/40" />
         </span>
         <div className="min-w-0">
-          <p className="text-base font-extrabold tracking-tight">JobSwiper Pro</p>
+          <p className="text-base font-extrabold tracking-tight">Пакеты лимитов</p>
           <p className="truncate text-xs text-white/85">
             Текущий план: Бесплатный
           </p>

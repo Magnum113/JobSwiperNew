@@ -130,7 +130,7 @@ export function GiftDialog() {
             Это вам подарок!
           </DialogTitle>
           <p className="text-sm leading-snug text-muted-foreground">
-            Сервис ещё в разработке, и оплата подписки пока недоступна. Поэтому
+            Сервис ещё в разработке, и оплата пакетов пока недоступна. Поэтому
             дарим вам <span className="font-semibold text-foreground">{BONUS_RESPONSES} откликов</span> бесплатно.
           </p>
 

@@ -69,12 +69,12 @@ export function DeckRefillBanner({
             Лимит оценки совместимости исчерпан
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            На бесплатном тарифе мы оценили максимум вакансий. Откройте Pro, чтобы
+            На бесплатном тарифе мы оценили максимум вакансий. Купите пакет, чтобы
             и дальше видеть «самые подходящие — первыми».
           </p>
           <Button onClick={onPro} className="mt-3 w-full bg-gradient-brand">
             <Crown className="size-4 fill-white/40" />
-            Открыть Pro
+            Купить пакет
           </Button>
         </>
       )}

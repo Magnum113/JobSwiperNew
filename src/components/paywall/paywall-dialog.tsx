@@ -23,8 +23,8 @@ export function PaywallDialog() {
   const claimProBonus = useAppStore((s) => s.claimProBonus);
   const openGiftDialog = useAppStore((s) => s.openGiftDialog);
 
-  // Default to the recommended (highlighted) plan.
-  const [planId, setPlanId] = useState<Plan["id"]>("month");
+  // Default to the recommended (highlighted) pack.
+  const [planId, setPlanId] = useState<Plan["id"]>("max");
 
   const plan = PLANS.find((p) => p.id === planId) ?? PLANS[0];
 
@@ -79,11 +79,11 @@ export function PaywallDialog() {
             <Crown className="size-6 fill-white/40" />
           </span>
           <DialogTitle className="mt-3 text-2xl font-extrabold tracking-tight text-white">
-            JobSwiper Pro
+            Пакеты лимитов
           </DialogTitle>
           <DialogDescription className="mt-1 text-sm text-white/85">
-            Откликайся быстрее и попадай в топ: ИИ пишет письма и находит лучшие
-            вакансии под тебя.
+            Купите разовый пакет откликов, анализов вакансий и разборов резюме
+            без подписки и автопродления.
           </DialogDescription>
         </div>
 
@@ -126,7 +126,7 @@ export function PaywallDialog() {
                     {p.price}
                   </span>
                   <span className="text-sm font-medium text-muted-foreground">
-                    ₽ {p.period}
+                    ₽
                   </span>
                 </span>
                 <span className="mt-1 text-xs text-muted-foreground">
@@ -170,10 +170,10 @@ export function PaywallDialog() {
             className="h-12 w-full rounded-xl bg-gradient-brand text-base font-semibold text-white shadow-sm transition-transform hover:scale-[1.01] hover:opacity-95"
           >
             <Sparkles className="size-4 fill-white/40" />
-            Оформить за {plan.price} ₽
+            Купить пакет за {plan.price} ₽
           </Button>
           <p className="mt-2.5 text-center text-xs text-muted-foreground">
-            Отмена в любой момент · Безопасная оплата
+            Разовая покупка · Безопасная оплата
           </p>
         </div>
       </DialogContent>

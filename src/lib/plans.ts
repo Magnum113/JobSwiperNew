@@ -1,13 +1,11 @@
-// Subscription plans — single source of truth for the paywall UI.
+// One-time limit packs — single source of truth for the paywall UI.
 // Pricing rationale and unit economics live in PRICING.md.
 
 export interface Plan {
-  id: "week" | "month";
+  id: "starter" | "max";
   name: string;
   /** Price in rubles. */
   price: number;
-  /** Human period, e.g. "в неделю". */
-  period: string;
   responses: number;
   resumes: number;
   analyses: number;
@@ -45,26 +43,24 @@ export function getFreeLimits(bonusClaimed: boolean): Limits {
 
 export const PLANS: Plan[] = [
   {
-    id: "week",
-    name: "Неделя",
+    id: "starter",
+    name: "Старт",
     price: 99,
-    period: "в неделю",
     responses: 100,
     resumes: 10,
     analyses: 300,
-    note: "Гибко на время активного поиска",
+    note: "Разовый пакет для первых откликов",
   },
   {
-    id: "month",
-    name: "Месяц",
+    id: "max",
+    name: "Максимум",
     price: 299,
-    period: "в месяц",
     responses: 500,
     resumes: 50,
     analyses: 1000,
-    badge: "Выгодно −25%",
+    badge: "Выгоднее",
     highlighted: true,
-    note: "Всего 10 ₽ в день",
+    note: "Больше лимитов за меньшую цену",
   },
 ];
 
