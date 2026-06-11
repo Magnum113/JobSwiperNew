@@ -238,9 +238,14 @@ export function PaywallDialog() {
             </div>
 
             {/* Plan selector */}
-            <div className="grid grid-cols-2 gap-2.5 px-5 pt-4 sm:px-6 sm:pt-5">
+            <div className="grid grid-cols-2 gap-2.5 px-5 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5">
               {PLANS.map((p) => {
                 const active = p.id === planId;
+                const limits: { value: number; label: string }[] = [
+                  { value: p.responses, label: "откликов" },
+                  { value: p.analyses, label: "анализов" },
+                  { value: p.resumes, label: "резюме" },
+                ];
                 return (
                   <button
                     key={p.id}
@@ -254,7 +259,7 @@ export function PaywallDialog() {
                       });
                     }}
                     className={cn(
-                      "relative flex min-h-[8.75rem] flex-col rounded-2xl border-2 p-3 text-left transition-all sm:p-3.5",
+                      "relative flex flex-col rounded-2xl border-2 p-3 text-left transition-all sm:p-3.5",
                       active
                         ? "border-primary bg-primary/5 shadow-sm"
                         : "border-border/70 bg-card hover:border-border",
@@ -265,7 +270,19 @@ export function PaywallDialog() {
                         {p.badge}
                       </span>
                     )}
-                    <span className="text-sm font-semibold">{p.name}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">{p.name}</span>
+                      <span
+                        className={cn(
+                          "inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                          active
+                            ? "border-primary bg-primary text-white"
+                            : "border-border",
+                        )}
+                      >
+                        {active && <Check className="size-3" strokeWidth={3} />}
+                      </span>
+                    </div>
                     <span className="mt-1 flex items-baseline gap-1">
                       <span className="text-2xl font-extrabold tracking-tight">
                         {p.price}
@@ -274,37 +291,20 @@ export function PaywallDialog() {
                         ₽
                       </span>
                     </span>
-                    <span className="mt-1 text-xs leading-snug text-muted-foreground">
-                      {p.note}
-                    </span>
-                    <span
-                      className={cn(
-                        "mt-auto inline-flex size-5 items-center justify-center self-end rounded-full border-2 transition-colors",
-                        active
-                          ? "border-primary bg-primary text-white"
-                          : "border-border",
-                      )}
-                    >
-                      {active && <Check className="size-3" strokeWidth={3} />}
-                    </span>
+                    <ul className="mt-2.5 space-y-1 border-t border-border/60 pt-2.5">
+                      {limits.map((l) => (
+                        <li
+                          key={l.label}
+                          className="flex items-baseline gap-1.5 text-xs leading-tight"
+                        >
+                          <b className="font-bold text-foreground">{l.value}</b>
+                          <span className="text-muted-foreground">{l.label}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </button>
                 );
               })}
-            </div>
-
-            {/* What you get on the chosen plan */}
-            <div className="mx-5 mb-4 mt-4 flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2 text-[11px] text-muted-foreground sm:mx-6 sm:px-3.5 sm:py-2.5 sm:text-xs">
-              <span>
-                <b className="text-foreground">{plan.responses}</b> откликов
-              </span>
-              <span className="text-border">·</span>
-              <span>
-                <b className="text-foreground">{plan.analyses}</b> анализов
-              </span>
-              <span className="text-border">·</span>
-              <span>
-                <b className="text-foreground">{plan.resumes}</b> резюме
-              </span>
             </div>
           </div>
 
