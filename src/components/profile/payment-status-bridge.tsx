@@ -41,8 +41,12 @@ export function PaymentStatusBridge() {
     window.history.replaceState(null, "", window.location.pathname);
 
     if (payment === "fail") {
+      trackGoal(ANALYTICS_GOALS.paymentReturnFail, {
+        order_id: orderId ?? "unknown",
+      });
       trackGoal(ANALYTICS_GOALS.paymentFail, {
         order_id: orderId ?? "unknown",
+        stage: "bank_return",
       });
       toast.error("Оплата не завершена");
       return;
@@ -50,6 +54,9 @@ export function PaymentStatusBridge() {
 
     if (payment !== "success" || !orderId) return;
     const confirmedOrderId = orderId;
+    trackGoal(ANALYTICS_GOALS.paymentReturnSuccess, {
+      order_id: confirmedOrderId,
+    });
 
     toast.loading("Проверяем оплату", { id: "payment-status" });
 
@@ -63,6 +70,7 @@ export function PaymentStatusBridge() {
             if (!cancelled && state) hydrateFromServer(state);
             trackGoal(ANALYTICS_GOALS.paymentSuccess, {
               order_id: confirmedOrderId,
+              status,
             });
             toast.success("Пакет лимитов активирован", {
               id: "payment-status",
@@ -74,6 +82,7 @@ export function PaymentStatusBridge() {
             trackGoal(ANALYTICS_GOALS.paymentFail, {
               order_id: confirmedOrderId,
               status,
+              stage: "status_check",
             });
             toast.error("Платёж возвращён", {
               id: "payment-status",
@@ -91,12 +100,18 @@ export function PaymentStatusBridge() {
             trackGoal(ANALYTICS_GOALS.paymentFail, {
               order_id: confirmedOrderId,
               status,
+              stage: "status_check",
             });
             toast.error("Оплата не завершена", { id: "payment-status" });
             return;
           }
         } catch (error) {
           if (attempt >= 5) {
+            trackGoal(ANALYTICS_GOALS.paymentCheckError, {
+              order_id: confirmedOrderId,
+              error_message:
+                error instanceof Error ? error.message : "status_check_failed",
+            });
             toast.error(
               error instanceof Error
                 ? error.message
@@ -111,6 +126,9 @@ export function PaymentStatusBridge() {
       }
 
       if (!cancelled) {
+        trackGoal(ANALYTICS_GOALS.paymentProcessing, {
+          order_id: confirmedOrderId,
+        });
         toast("Платёж обрабатывается", {
           id: "payment-status",
           description:

@@ -615,8 +615,19 @@ clickmap, `trackLinks`, `accurateTrackBounce` включены. `noscript`-fallb
 | `hh_apply_click` | пользователь нажал переход к отклику на hh.ru | ключевая |
 | `paywall_open` | открыт paywall | монетизация |
 | `subscription_cta_click` | нажата CTA-кнопка покупки пакета | монетизация |
+| `payment_plan_select` | пользователь выбрал пакет в paywall | монетизация |
+| `payment_buy_click` | пользователь нажал «Купить пакет» | монетизация, ключевая |
+| `payment_auth_required` | покупка заблокирована, потому что пользователь не авторизован | монетизация |
+| `payment_create_start` | начался запрос `/api/billing/create-payment` | монетизация/диагностика |
+| `payment_create_success` | backend создал заказ и получил `paymentUrl` от T-Bank | монетизация/диагностика |
+| `payment_create_error` | не удалось создать платёжную ссылку | монетизация/диагностика |
+| `payment_redirect_to_bank` | пользователь отправлен на страницу оплаты T-Bank | монетизация, ключевая |
+| `payment_return_success` | пользователь вернулся с `payment=success` | монетизация |
+| `payment_return_fail` | пользователь вернулся с `payment=fail` | монетизация |
 | `payment_success` | подтверждённый платёж активировал пакет лимитов | монетизация |
 | `payment_fail` | банк вернул пользователя с ошибкой или заказ завершился неуспешно | монетизация |
+| `payment_processing` | после всех попыток статус всё ещё не финальный | монетизация/диагностика |
+| `payment_check_error` | не удалось проверить статус заказа после возврата | монетизация/диагностика |
 | `limit_dialog_open` | открыт диалог исчерпанного лимита | монетизация |
 | `vacancy_feed_error` | hh.ru/сервер не загрузил вакансии | диагностика |
 | `cover_letter_error` | генерация письма завершилась ошибкой | диагностика |
@@ -648,6 +659,18 @@ Yandex Metrika доступна только в браузере:
 - `stage`: `callback`, `provider_redirect`, `session_missing`;
 - `has_email`: есть ли email в профиле после успешной авторизации;
 - `error_message`: короткая безопасная ошибка, без токенов, code, cookie и secret.
+
+Параметры оплаты:
+- `plan_id`: `starter` или `max`;
+- `price`: цена пакета в рублях;
+- `source`: источник открытия paywall (`feed-header`, `feed-refill`, `limit-dialog`
+  и т.п.);
+- `order_id`: внутренний `billing_orders.id`;
+- `payment_id`: `PaymentId` T-Bank;
+- `status`: финальный или промежуточный статус заказа;
+- `stage`: этап ошибки (`bank_return`, `status_check`);
+- `status_code`: HTTP-статус при ошибке создания платежа;
+- `error_message`: короткая безопасная ошибка без ключей, токенов и raw-payload банка.
 
 ---
 

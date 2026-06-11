@@ -90,6 +90,11 @@ export function PaywallDialog() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const plan = PLANS.find((p) => p.id === planId) ?? PLANS[0];
+  const paymentParams = {
+    plan_id: plan.id,
+    price: plan.price,
+    source: source ?? "unknown",
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -101,6 +106,7 @@ export function PaywallDialog() {
   const handlePay = async () => {
     if (!authChecked) return;
     if (!authUser) {
+      trackGoal(ANALYTICS_GOALS.paymentAuthRequired, paymentParams);
       closePaywall();
       setAuthDialogOpen(true);
       return;
@@ -108,29 +114,59 @@ export function PaywallDialog() {
 
     setPaying(true);
     trackGoal(ANALYTICS_GOALS.subscriptionCtaClick, {
-      plan_id: plan.id,
-      price: plan.price,
-      source: source ?? "unknown",
+      ...paymentParams,
+    });
+    trackGoal(ANALYTICS_GOALS.paymentBuyClick, {
+      ...paymentParams,
     });
 
+    let createErrorTracked = false;
     try {
+      trackGoal(ANALYTICS_GOALS.paymentCreateStart, {
+        ...paymentParams,
+      });
       const res = await fetch("/api/billing/create-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId: plan.id }),
       });
       const data = (await res.json().catch(() => null)) as {
+        orderId?: string;
+        paymentId?: string;
         paymentUrl?: string;
         error?: string;
       } | null;
 
       if (!res.ok || !data?.paymentUrl) {
+        createErrorTracked = true;
+        trackGoal(ANALYTICS_GOALS.paymentCreateError, {
+          ...paymentParams,
+          status_code: res.status,
+          error_message: data?.error ?? "payment_url_missing",
+        });
         throw new Error(data?.error ?? "Не удалось создать платёж");
       }
 
+      trackGoal(ANALYTICS_GOALS.paymentCreateSuccess, {
+        ...paymentParams,
+        order_id: data.orderId,
+        payment_id: data.paymentId,
+      });
+      trackGoal(ANALYTICS_GOALS.paymentRedirectToBank, {
+        ...paymentParams,
+        order_id: data.orderId,
+        payment_id: data.paymentId,
+      });
       window.location.assign(data.paymentUrl);
     } catch (error) {
       setPaying(false);
+      if (!createErrorTracked) {
+        trackGoal(ANALYTICS_GOALS.paymentCreateError, {
+          ...paymentParams,
+          error_message:
+            error instanceof Error ? error.message : "payment_create_failed",
+        });
+      }
       toast.error(
         error instanceof Error ? error.message : "Не удалось создать платёж",
       );
@@ -209,7 +245,14 @@ export function PaywallDialog() {
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => setPlanId(p.id)}
+                    onClick={() => {
+                      setPlanId(p.id);
+                      trackGoal(ANALYTICS_GOALS.paymentPlanSelect, {
+                        plan_id: p.id,
+                        price: p.price,
+                        source: source ?? "unknown",
+                      });
+                    }}
                     className={cn(
                       "relative flex min-h-[8.75rem] flex-col rounded-2xl border-2 p-3 text-left transition-all sm:p-3.5",
                       active
