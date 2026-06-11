@@ -351,10 +351,11 @@ export function getCity(slug: string): City | undefined {
 
 // ── Launch combo set (Phase 3) ───────────────────────────────────────────────
 // Capped on purpose: ONLY these profession×city pages are generated and indexed
-// (the route uses dynamicParams=false → everything else 404s). Москва + СПб
-// cover most search volume; the other CITIES stay available to the data layer
-// for the next batch. Total site pages stay ≤ 50: 26 professions + hub + these.
-const COMBO_CITY_SLUGS = ["moskva", "spb"] as const;
+// (the route uses dynamicParams=false → everything else 404s). The 3 biggest
+// markets cover most search volume; the rest of CITIES stays available to the
+// data layer for the next batch. Total site pages ≈ 60 (a deliberate, indexable
+// launch size for a new domain): 26 professions + hub + these 33 combos.
+const COMBO_CITY_SLUGS = ["moskva", "spb", "ekaterinburg"] as const;
 const COMBO_PROFESSION_SLUGS = [
   "programmist",
   "frontend-razrabotchik",
@@ -374,7 +375,7 @@ export interface Combo {
   city: string;
 }
 
-/** The full allowlist of profession×city pages (11 × 2 = 22). */
+/** The full allowlist of profession×city pages (11 × 3 = 33). */
 export const COMBOS: Combo[] = COMBO_PROFESSION_SLUGS.flatMap((profession) =>
   COMBO_CITY_SLUGS.map((city) => ({ profession, city })),
 );
