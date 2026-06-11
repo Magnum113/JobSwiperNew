@@ -22,7 +22,7 @@ export type PlanId = Plan["id"];
 export const FREE_LIMITS = {
   responses: 10,
   resumes: 3,
-  analyses: 30,
+  analyses: 100,
 } as const;
 
 /** One-time bonus granted from the paywall while payments are being wired up. */

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { SunMoon } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -11,6 +12,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "Личный кабинет",
+  description: "Личный кабинет JobSwiper: аккаунт, резюме, лимиты и оплата.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function ProfilePage() {
   return (

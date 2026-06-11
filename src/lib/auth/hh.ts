@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 // The same OAuth application (HH_CLIENT_ID / HH_CLIENT_SECRET) that issues the
 // server-side client_credentials app token also issues user tokens. We exchange
 // the code for a short-lived user token only to read `GET /me` (identity) and
-// then drop it — no token storage, no resume access. See architecture.md §5.
+// then drop it — no token storage, no resume access. See ARCHITECTURE.md §5.
 
 export const HH_AUTH_STATE_COOKIE = "jobswiper-hh-state";
 export const HH_AUTH_VERIFIER_COOKIE = "jobswiper-hh-verifier";

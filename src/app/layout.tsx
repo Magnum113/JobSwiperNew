@@ -17,10 +17,46 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://jobswiper.ru";
+const siteName = "JobSwiper";
+const defaultTitle = "JobSwiper — подбор вакансий с помощью ИИ";
+const defaultDescription =
+  "ИИ подбирает релевантные вакансии по резюме, оценивает совпадение и помогает откликнуться с персональным сопроводительным письмом.";
+
 export const metadata: Metadata = {
-  title: "JobSwiper — подбор вакансий с помощью ИИ",
-  description:
-    "ИИ подбирает релевантные вакансии по резюме, оценивает совпадение и помогает откликнуться с персональным сопроводительным письмом.",
+  metadataBase: new URL(siteUrl),
+  title: defaultTitle,
+  description: defaultDescription,
+  applicationName: siteName,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: defaultTitle,
+    description: defaultDescription,
+    url: "/",
+    siteName,
+    locale: "ru_RU",
+    type: "website",
+    images: [
+      {
+        url: "/jobswiper-logo-icon.svg",
+        width: 512,
+        height: 512,
+        alt: "JobSwiper",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: ["/jobswiper-logo-icon.svg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export const viewport: Viewport = {
