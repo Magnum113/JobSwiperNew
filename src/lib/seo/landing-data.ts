@@ -1,7 +1,7 @@
 import "server-only";
 import { searchVacancies } from "@/lib/hh/client";
 import type { HHVacancyItem } from "@/lib/hh/types";
-import type { Profession } from "./catalog";
+import type { City, Profession } from "./catalog";
 
 // 6h cache: fresh enough for a listing, light on hh.ru rate limits. One HH call
 // per page per window (~26 pages total).
@@ -133,11 +133,15 @@ const rub = new Intl.NumberFormat("ru-RU");
 export function buildProfessionFaq(
   prof: Profession,
   data: ProfessionLanding,
+  city?: City,
 ): { question: string; answer: string }[] {
+  const where = city ? ` ${city.prepositional}` : ""; // " в Москве"
+  const region = city ? city.prepositional : "по России";
+
   const faq: { question: string; answer: string }[] = [
     {
-      question: `Сколько вакансий ${prof.genitive} сейчас открыто?`,
-      answer: `Прямо сейчас по России открыто около ${rub.format(data.found)} вакансий ${prof.genitive}. JobSwiper отбирает из них подходящие именно вам по резюме и оценивает совпадение.`,
+      question: `Сколько вакансий ${prof.genitive}${where} сейчас открыто?`,
+      answer: `Сейчас ${region} открыто около ${rub.format(data.found)} вакансий ${prof.genitive}. JobSwiper отбирает из них подходящие именно вам по резюме и оценивает совпадение.`,
     },
   ];
 
@@ -147,15 +151,15 @@ export function buildProfessionFaq(
       parts.push(`от ${rub.format(data.salary.from)} до ${rub.format(data.salary.to)} ₽`);
     }
     faq.push({
-      question: `Сколько зарабатывает ${prof.nominative.toLowerCase()}?`,
-      answer: `По текущим вакансиям с указанной зарплатой медиана для роли «${prof.nominative}» — около ${rub.format(data.salary.median)} ₽${parts.length ? `, диапазон ${parts[0]}` : ""}. Точная сумма зависит от опыта, города и компании.`,
+      question: `Сколько зарабатывает ${prof.nominative.toLowerCase()}${where}?`,
+      answer: `По текущим вакансиям${where} с указанной зарплатой медиана для роли «${prof.nominative}» — около ${rub.format(data.salary.median)} ₽${parts.length ? `, диапазон ${parts[0]}` : ""}. Точная сумма зависит от опыта и компании.`,
     });
   }
 
   if (data.remoteShare != null && data.remoteShare > 0) {
     faq.push({
       question: `Можно ли работать удалённо?`,
-      answer: `Да, часть вакансий ${prof.genitive} предлагает удалённый формат — в текущей выборке это около ${Math.round(data.remoteShare * 100)}%. Формат работы виден в карточке каждой вакансии.`,
+      answer: `Да, часть вакансий ${prof.genitive}${where} предлагает удалённый формат — в текущей выборке это около ${Math.round(data.remoteShare * 100)}%. Формат работы виден в карточке каждой вакансии.`,
     });
   }
 

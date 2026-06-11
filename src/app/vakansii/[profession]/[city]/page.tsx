@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Briefcase, Percent, Wallet } from "lucide-react";
 import {
-  PROFESSIONS,
+  COMBOS,
   comboCitiesForProfession,
+  comboExists,
+  getCity,
   getProfession,
-  relatedProfessions,
 } from "@/lib/seo/catalog";
 import {
   buildProfessionFaq,
@@ -17,33 +18,34 @@ import { LandingFaq } from "@/components/vakansii/landing-faq";
 import { Button } from "@/components/ui/button";
 
 export const revalidate = 21600; // 6h ISR
-// Only the curated catalog gets pages — unknown slugs 404, capping page count.
+// Only the curated allowlist (COMBOS) gets pages — everything else 404s. This
+// hard-caps the page count (no hundreds of thin combos).
 export const dynamicParams = false;
 
 const SITE = "https://jobswiper.ru";
 const rub = new Intl.NumberFormat("ru-RU");
 
 export function generateStaticParams() {
-  return PROFESSIONS.map((p) => ({ profession: p.slug }));
+  return COMBOS.map((c) => ({ profession: c.profession, city: c.city }));
 }
 
-type Params = { params: Promise<{ profession: string }> };
+type Params = { params: Promise<{ profession: string; city: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const { profession } = await params;
+  const { profession, city } = await params;
   const prof = getProfession(profession);
-  if (!prof) return {};
+  const town = getCity(city);
+  if (!prof || !town) return {};
 
-  const data = await getProfessionLanding(prof);
-  const title = `Вакансии ${prof.genitive} — подбор по резюме с ИИ | JobSwiper`;
-  const description = `${rub.format(data.found)} актуальных вакансий ${prof.genitive} в России. JobSwiper подберёт подходящие по вашему резюме, оценит совпадение и поможет с откликом.`;
-  const canonical = `/vakansii/${prof.slug}`;
+  const data = await getProfessionLanding(prof, town.areaId);
+  const title = `Вакансии ${prof.genitive} ${town.prepositional} — ${rub.format(data.found)} вакансий | JobSwiper`;
+  const description = `${rub.format(data.found)} вакансий ${prof.genitive} ${town.prepositional}. JobSwiper подберёт подходящие по вашему резюме, оценит совпадение и поможет с откликом.`;
+  const canonical = `/vakansii/${prof.slug}/${town.slug}`;
 
   return {
     title,
     description,
     alternates: { canonical },
-    // Thin (few results) → keep out of the index but still crawlable.
     robots: data.indexable ? undefined : { index: false, follow: true },
     openGraph: { title, description, url: canonical, type: "website" },
   };
@@ -55,23 +57,24 @@ function salaryHeadline(
   median: number | null,
 ): string {
   if (median != null) return `~${rub.format(median)} ₽`;
-  if (from != null && to != null)
-    return `${rub.format(from)}–${rub.format(to)} ₽`;
+  if (from != null && to != null) return `${rub.format(from)}–${rub.format(to)} ₽`;
   if (from != null) return `от ${rub.format(from)} ₽`;
   if (to != null) return `до ${rub.format(to)} ₽`;
   return "—";
 }
 
 export default async function Page({ params }: Params) {
-  const { profession } = await params;
+  const { profession, city } = await params;
   const prof = getProfession(profession);
-  if (!prof) notFound();
+  const town = getCity(city);
+  if (!prof || !town || !comboExists(profession, city)) notFound();
 
-  const data = await getProfessionLanding(prof);
-  const faq = buildProfessionFaq(prof, data);
-  const related = relatedProfessions(prof);
-  const comboCities = comboCitiesForProfession(prof.slug);
-  const canonical = `${SITE}/vakansii/${prof.slug}`;
+  const data = await getProfessionLanding(prof, town.areaId);
+  const faq = buildProfessionFaq(prof, data, town);
+  const otherCities = comboCitiesForProfession(prof.slug).filter(
+    (c) => c.slug !== town.slug,
+  );
+  const canonical = `${SITE}/vakansii/${prof.slug}/${town.slug}`;
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -81,14 +84,20 @@ export default async function Page({ params }: Params) {
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Главная", item: `${SITE}/` },
           { "@type": "ListItem", position: 2, name: "Вакансии", item: `${SITE}/vakansii` },
-          { "@type": "ListItem", position: 3, name: `Вакансии ${prof.genitive}`, item: canonical },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: `Вакансии ${prof.genitive}`,
+            item: `${SITE}/vakansii/${prof.slug}`,
+          },
+          { "@type": "ListItem", position: 4, name: town.name, item: canonical },
         ],
       },
       {
         "@type": "CollectionPage",
-        name: `Вакансии ${prof.genitive}`,
+        name: `Вакансии ${prof.genitive} ${town.prepositional}`,
         url: canonical,
-        description: prof.intro,
+        description: `${prof.intro} Подборка вакансий ${town.prepositional}.`,
         mainEntity: {
           "@type": "ItemList",
           numberOfItems: data.items.length,
@@ -149,17 +158,25 @@ export default async function Page({ params }: Params) {
             Вакансии
           </Link>
           <span className="mx-1.5">/</span>
-          <span className="text-foreground">{prof.nominative}</span>
+          <Link
+            href={`/vakansii/${prof.slug}`}
+            className="hover:text-foreground hover:underline"
+          >
+            {prof.nominative}
+          </Link>
+          <span className="mx-1.5">/</span>
+          <span className="text-foreground">{town.name}</span>
         </nav>
 
         {/* Hero */}
         <header className="flex flex-col gap-4">
           <h1 className="text-3xl font-black leading-tight tracking-tight text-foreground sm:text-4xl">
-            Вакансии {prof.genitive}
+            Вакансии {prof.genitive} {town.prepositional}
           </h1>
           <p className="max-w-2xl text-pretty text-base leading-7 text-muted-foreground">
-            {prof.intro} JobSwiper подберёт подходящие вакансии по вашему резюме,
-            оценит совпадение и поможет откликнуться с сопроводительным письмом.
+            {prof.intro} JobSwiper подберёт подходящие вакансии {town.prepositional}{" "}
+            по вашему резюме, оценит совпадение и поможет откликнуться с
+            сопроводительным письмом.
           </p>
           <div>
             <Button
@@ -196,7 +213,7 @@ export default async function Page({ params }: Params) {
         {data.items.length > 0 && (
           <section aria-label="Список вакансий" className="flex flex-col gap-3">
             <h2 className="text-xl font-black text-foreground">
-              Свежие вакансии {prof.genitive}
+              Свежие вакансии {prof.genitive} {town.prepositional}
             </h2>
             <div className="grid gap-3">
               {data.items.map((v) => (
@@ -209,59 +226,31 @@ export default async function Page({ params }: Params) {
           </section>
         )}
 
-        {/* Top cities (data-driven, unique copy) */}
-        {data.topCities.length > 1 && (
-          <section className="rounded-2xl border border-border/65 bg-muted/30 p-4 sm:p-5">
-            <h2 className="text-base font-bold text-foreground">
-              Где больше всего вакансий {prof.genitive}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              По текущей выборке вакансии {prof.genitive} чаще всего встречаются в
-              городах:{" "}
-              {data.topCities.map((c) => c.name).join(", ")}.
-            </p>
-          </section>
-        )}
-
         {/* FAQ */}
         <section aria-label="Частые вопросы" className="flex flex-col gap-4">
           <h2 className="text-xl font-black text-foreground">
-            Частые вопросы о вакансиях {prof.genitive}
+            Частые вопросы о вакансиях {prof.genitive} {town.prepositional}
           </h2>
           <LandingFaq items={faq} />
         </section>
 
-        {/* By city (only combo-enabled professions) */}
-        {comboCities.length > 0 && (
-          <section aria-label="Вакансии по городам" className="flex flex-col gap-3">
-            <h2 className="text-base font-bold text-foreground">
-              Вакансии {prof.genitive} по городам
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {comboCities.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/vakansii/${prof.slug}/${c.slug}`}
-                  className="rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-violet-300 hover:text-violet-700"
-                >
-                  {prof.nominative} {c.prepositional}
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* Internal links */}
-        <section aria-label="Похожие профессии" className="flex flex-col gap-3">
-          <h2 className="text-base font-bold text-foreground">Похожие профессии</h2>
+        <section aria-label="Ещё вакансии" className="flex flex-col gap-3">
+          <h2 className="text-base font-bold text-foreground">Ещё вакансии</h2>
           <div className="flex flex-wrap gap-2">
-            {related.map((p) => (
+            <Link
+              href={`/vakansii/${prof.slug}`}
+              className="rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-violet-300 hover:text-violet-700"
+            >
+              Вакансии {prof.genitive} по всей России
+            </Link>
+            {otherCities.map((c) => (
               <Link
-                key={p.slug}
-                href={`/vakansii/${p.slug}`}
+                key={c.slug}
+                href={`/vakansii/${prof.slug}/${c.slug}`}
                 className="rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-violet-300 hover:text-violet-700"
               >
-                {p.nominative}
+                {prof.nominative} {c.prepositional}
               </Link>
             ))}
             <Link

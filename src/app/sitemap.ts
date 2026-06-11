@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { PROFESSIONS } from "@/lib/seo/catalog";
+import { COMBOS, PROFESSIONS } from "@/lib/seo/catalog";
 
 const SITE_URL = "https://jobswiper.ru";
 
@@ -42,6 +42,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "daily" as const,
       priority: 0.7,
+    })),
+    // Profession × city combos (curated allowlist).
+    ...COMBOS.map((c) => ({
+      url: `${SITE_URL}/vakansii/${c.profession}/${c.city}`,
+      lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.6,
     })),
   ];
 

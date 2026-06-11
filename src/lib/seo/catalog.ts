@@ -308,3 +308,89 @@ export function relatedProfessions(prof: Profession, limit = 6): Profession[] {
   );
   return [...sameCat, ...others].slice(0, limit);
 }
+
+// ── Cities (Phase 3: /vakansii/{profession}/{city}) ──────────────────────────
+// Curated major-market cities only — not every hh.ru town — so combos stay
+// substantial. Real area ids from GET /areas/113. `prepositional` gives natural
+// titles: "Вакансии {genitive} {prepositional}" → "…маркетолога в Москве".
+// `tier1` = the biggest markets, bulk-listed in sitemap (reliable supply).
+
+export interface City {
+  slug: string;
+  name: string;
+  /** Prepositional case for "… {prepositional}": "в Москве". */
+  prepositional: string;
+  /** hh.ru area id. */
+  areaId: string;
+}
+
+export const CITIES: City[] = [
+  { slug: "moskva", name: "Москва", prepositional: "в Москве", areaId: "1" },
+  { slug: "spb", name: "Санкт-Петербург", prepositional: "в Санкт-Петербурге", areaId: "2" },
+  { slug: "ekaterinburg", name: "Екатеринбург", prepositional: "в Екатеринбурге", areaId: "3" },
+  { slug: "novosibirsk", name: "Новосибирск", prepositional: "в Новосибирске", areaId: "4" },
+  { slug: "kazan", name: "Казань", prepositional: "в Казани", areaId: "88" },
+  { slug: "nizhny-novgorod", name: "Нижний Новгород", prepositional: "в Нижнем Новгороде", areaId: "66" },
+  { slug: "krasnodar", name: "Краснодар", prepositional: "в Краснодаре", areaId: "53" },
+  { slug: "rostov-na-donu", name: "Ростов-на-Дону", prepositional: "в Ростове-на-Дону", areaId: "76" },
+  { slug: "chelyabinsk", name: "Челябинск", prepositional: "в Челябинске", areaId: "104" },
+  { slug: "samara", name: "Самара", prepositional: "в Самаре", areaId: "78" },
+  { slug: "ufa", name: "Уфа", prepositional: "в Уфе", areaId: "99" },
+  { slug: "omsk", name: "Омск", prepositional: "в Омске", areaId: "68" },
+  { slug: "voronezh", name: "Воронеж", prepositional: "в Воронеже", areaId: "26" },
+  { slug: "perm", name: "Пермь", prepositional: "в Перми", areaId: "72" },
+  { slug: "volgograd", name: "Волгоград", prepositional: "в Волгограде", areaId: "24" },
+  { slug: "krasnoyarsk", name: "Красноярск", prepositional: "в Красноярске", areaId: "54" },
+];
+
+const CITY_BY_SLUG = new Map(CITIES.map((c) => [c.slug, c]));
+
+export function getCity(slug: string): City | undefined {
+  return CITY_BY_SLUG.get(slug);
+}
+
+// ── Launch combo set (Phase 3) ───────────────────────────────────────────────
+// Capped on purpose: ONLY these profession×city pages are generated and indexed
+// (the route uses dynamicParams=false → everything else 404s). Москва + СПб
+// cover most search volume; the other CITIES stay available to the data layer
+// for the next batch. Total site pages stay ≤ 50: 26 professions + hub + these.
+const COMBO_CITY_SLUGS = ["moskva", "spb"] as const;
+const COMBO_PROFESSION_SLUGS = [
+  "programmist",
+  "frontend-razrabotchik",
+  "backend-razrabotchik",
+  "python-razrabotchik",
+  "analitik-dannyh",
+  "marketolog",
+  "menedzher-po-prodazham",
+  "product-manager",
+  "buhgalter",
+  "dizayner",
+  "hr-menedzher",
+] as const;
+
+export interface Combo {
+  profession: string;
+  city: string;
+}
+
+/** The full allowlist of profession×city pages (11 × 2 = 22). */
+export const COMBOS: Combo[] = COMBO_PROFESSION_SLUGS.flatMap((profession) =>
+  COMBO_CITY_SLUGS.map((city) => ({ profession, city })),
+);
+
+const COMBO_SET = new Set(COMBOS.map((c) => `${c.profession}/${c.city}`));
+
+export function comboExists(professionSlug: string, citySlug: string): boolean {
+  return COMBO_SET.has(`${professionSlug}/${citySlug}`);
+}
+
+/** Cities available as combo pages for a profession (for internal links). */
+export function comboCitiesForProfession(professionSlug: string): City[] {
+  if (!(COMBO_PROFESSION_SLUGS as readonly string[]).includes(professionSlug)) {
+    return [];
+  }
+  return COMBO_CITY_SLUGS.map((s) => getCity(s)).filter(
+    (c): c is City => c != null,
+  );
+}
