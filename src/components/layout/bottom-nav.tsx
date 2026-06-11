@@ -15,6 +15,7 @@ const TABS = [
 export function BottomNav() {
   const pathname = usePathname();
   const hydrated = useAppStore((s) => s.hydrated);
+  const authUser = useAppStore((s) => s.authUser);
   const likedCount = useAppStore((s) => Object.keys(s.liked).length);
   const reduce = useReducedMotion();
 
@@ -39,6 +40,10 @@ export function BottomNav() {
   const labelTransition = reduce
     ? { duration: 0 }
     : { type: "spring" as const, stiffness: 520, damping: 36, mass: 0.45 };
+
+  if (pathname === "/" && !authUser) {
+    return null;
+  }
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))]">

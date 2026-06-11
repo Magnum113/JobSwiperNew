@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import HomeClient from "@/components/home/home-client";
+import { faqItems } from "@/components/landing/seo-content";
 
 const title = "JobSwiper — ИИ-подбор вакансий по резюме";
 const description =
@@ -25,5 +26,46 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <HomeClient />;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        name: "JobSwiper",
+        url: "https://jobswiper.ru/",
+        description,
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+      },
+      {
+        "@type": "WebSite",
+        name: "JobSwiper",
+        url: "https://jobswiper.ru/",
+        description,
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: faqItems.map(({ question, answer }) => ({
+          "@type": "Question",
+          name: question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: answer,
+          },
+        })),
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
+      <HomeClient />
+    </>
+  );
 }

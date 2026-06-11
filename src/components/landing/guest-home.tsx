@@ -13,6 +13,12 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import {
+  audienceSegments,
+  faqItems,
+  seoUseCases,
+  trustHighlights,
+} from "@/components/landing/seo-content";
 import { Button } from "@/components/ui/button";
 
 const proofPoints = [
@@ -101,6 +107,25 @@ function ProductPreview() {
         </article>
       </div>
     </section>
+  );
+}
+
+function SectionIntro({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="mx-auto mb-5 max-w-2xl text-center">
+      <h2 className="text-2xl font-black tracking-normal text-foreground sm:text-3xl">
+        {title}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">
+        {text}
+      </p>
+    </div>
   );
 }
 
@@ -212,6 +237,92 @@ export function GuestHome() {
             Перейти к резюме
             <BadgeCheck className="size-4" />
           </Button>
+        </div>
+      </section>
+
+      <section className="px-4 pb-8 sm:px-6">
+        <SectionIntro
+          title="Кому помогает JobSwiper"
+          text="Сервис подходит тем, кто хочет искать работу не по бесконечному списку вакансий, а по совпадению с реальным опытом и целями."
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {audienceSegments.map(({ icon: Icon, title, text }) => (
+            <article
+              key={title}
+              className="rounded-2xl border border-border/65 bg-white/70 p-4 shadow-sm backdrop-blur"
+            >
+              <span className="mb-3 grid size-10 place-items-center rounded-2xl bg-violet-50 text-violet-600">
+                <Icon className="size-5" />
+              </span>
+              <h3 className="text-base font-bold leading-snug text-foreground">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-4 pb-8 sm:px-6">
+        <div className="rounded-[1.6rem] border border-border/65 bg-background/84 p-4 shadow-sm sm:p-5">
+          <SectionIntro
+            title="Что делает ИИ-подбор вакансий"
+            text="JobSwiper связывает резюме, вакансии и сопроводительное письмо в один короткий сценарий: найти подходящее, понять совпадение и быстрее откликнуться."
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {seoUseCases.map(({ icon: Icon, title, text }) => (
+              <article
+                key={title}
+                className="flex gap-3 rounded-2xl bg-muted/45 p-3"
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-background text-emerald-600">
+                  <Icon className="size-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold leading-snug text-foreground">{title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 pb-8 sm:px-6">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {trustHighlights.map(({ icon: Icon, title, text }) => (
+            <article
+              key={title}
+              className="rounded-2xl border border-border/60 bg-white/62 p-4 shadow-sm"
+            >
+              <div className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
+                <Icon className="size-4 text-violet-600" />
+                {title}
+              </div>
+              <p className="text-sm leading-6 text-muted-foreground">{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-4 pb-10 sm:px-6">
+        <SectionIntro
+          title="Вопросы перед стартом"
+          text="Коротко о подборе вакансий по резюме, оценке совпадения, письмах и лимитах."
+        />
+        <div className="mx-auto grid max-w-3xl gap-3">
+          {faqItems.map(({ question, answer }) => (
+            <details
+              key={question}
+              className="group rounded-2xl border border-border/65 bg-background/82 p-4 shadow-sm"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-foreground">
+                {question}
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-lg leading-none text-violet-600 transition-transform group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{answer}</p>
+            </details>
+          ))}
         </div>
       </section>
     </div>
