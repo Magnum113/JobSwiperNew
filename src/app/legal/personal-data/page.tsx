@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Согласие на обработку персональных данных | JobSwiper",
   description:
     "Согласие пользователя JobSwiper на обработку персональных данных.",
+  alternates: { canonical: "/legal/personal-data" },
 };
 
 export default function PersonalDataPage() {

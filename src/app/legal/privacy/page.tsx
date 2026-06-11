@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Политика конфиденциальности | JobSwiper",
   description:
     "Политика обработки персональных данных пользователей сервиса JobSwiper.",
+  alternates: { canonical: "/legal/privacy" },
 };
 
 export default function PrivacyPage() {

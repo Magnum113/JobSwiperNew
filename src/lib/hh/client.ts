@@ -91,6 +91,9 @@ export function buildSearchQuery(params: VacancySearchParams): URLSearchParams {
 
   if (params.text?.trim()) qs.set("text", params.text.trim());
   if (params.area && params.area !== "any") qs.set("area", params.area);
+  for (const role of params.professional_role ?? []) {
+    qs.append("professional_role", role);
+  }
   if (params.salary && params.salary > 0) {
     qs.set("salary", String(params.salary));
     qs.set("currency", "RUR");
@@ -108,11 +111,17 @@ export function buildSearchQuery(params: VacancySearchParams): URLSearchParams {
 
 export async function searchVacancies(
   params: VacancySearchParams,
+  // The live app passes nothing → no-store (always fresh). SEO landing pages
+  // pass a `revalidate` so the fetch is cached and the route can be statically
+  // generated / ISR'd instead of going dynamic.
+  options: { revalidate?: number } = {},
 ): Promise<HHSearchResponse> {
   const qs = buildSearchQuery(params);
-  const res = await hhGet(`${HH_BASE}/vacancies?${qs.toString()}`, {
-    cache: "no-store",
-  });
+  const init =
+    options.revalidate != null
+      ? { next: { revalidate: options.revalidate } }
+      : { cache: "no-store" as const };
+  const res = await hhGet(`${HH_BASE}/vacancies?${qs.toString()}`, init);
 
   if (!res.ok) {
     throw new HHError(

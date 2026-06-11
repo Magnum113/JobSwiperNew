@@ -5,6 +5,12 @@ export function LegalFooter() {
   return (
     <footer className="px-4 pb-28 pt-2 text-center text-[11px] leading-5 text-muted-foreground sm:px-8">
       <nav className="flex flex-wrap justify-center gap-x-3 gap-y-1">
+        <Link
+          href="/vakansii"
+          className="underline-offset-4 hover:text-foreground hover:underline"
+        >
+          Вакансии по профессиям
+        </Link>
         {LEGAL_LINKS.map((link) => (
           <Link
             key={link.href}

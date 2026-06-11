@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Публичная оферта | JobSwiper",
   description:
     "Условия покупки разовых пакетов лимитов JobSwiper, порядок оплаты, оказания услуги и возврата.",
+  alternates: { canonical: "/legal/offer" },
 };
 
 export default function OfferPage() {

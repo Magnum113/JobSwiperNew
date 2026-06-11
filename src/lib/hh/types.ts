@@ -77,6 +77,8 @@ export interface HHSearchResponse {
 export interface VacancySearchParams {
   text?: string;
   area?: string;
+  /** hh.ru professional_role dictionary ids (repeatable). Used by SEO landings. */
+  professional_role?: string[];
   salary?: number;
   only_with_salary?: boolean;
   experience?: string[];

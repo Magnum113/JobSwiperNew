@@ -5,6 +5,7 @@ import { SELLER, SERVICE } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Реквизиты и контакты | JobSwiper",
   description: "Реквизиты продавца, контакты поддержки и сведения об ИП.",
+  alternates: { canonical: "/legal/contacts" },
 };
 
 export default function ContactsPage() {

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Возвраты и претензии | JobSwiper",
   description:
     "Порядок возврата денежных средств, рассмотрения претензий и обращений пользователей JobSwiper.",
+  alternates: { canonical: "/legal/refund" },
 };
 
 export default function RefundPage() {

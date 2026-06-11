@@ -6,6 +6,7 @@ import { LEGAL_LINKS } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Правовая информация | JobSwiper",
   description: "Оферта, возвраты, реквизиты и документы по персональным данным.",
+  alternates: { canonical: "/legal" },
 };
 
 export default function LegalIndexPage() {

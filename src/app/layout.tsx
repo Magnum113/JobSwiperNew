@@ -38,20 +38,13 @@ export const metadata: Metadata = {
     siteName,
     locale: "ru_RU",
     type: "website",
-    images: [
-      {
-        url: "/jobswiper-logo-icon.svg",
-        width: 512,
-        height: 512,
-        alt: "JobSwiper",
-      },
-    ],
+    // og:image is supplied by the opengraph-image.png file convention.
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
-    images: ["/jobswiper-logo-icon.svg"],
+    // twitter:image is supplied by the twitter-image.png file convention.
   },
   robots: {
     index: true,
@@ -63,7 +56,6 @@ export const viewport: Viewport = {
   themeColor: "#7c3aed",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
