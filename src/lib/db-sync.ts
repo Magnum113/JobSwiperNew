@@ -32,7 +32,7 @@ export interface AuthUser {
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
-  provider?: "google" | "yandex";
+  provider?: "google" | "yandex" | "hh";
 }
 
 export async function getAuthUser(): Promise<AuthUser | null> {

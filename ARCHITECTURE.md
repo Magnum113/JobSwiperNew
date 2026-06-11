@@ -620,6 +620,34 @@ clickmap, `trackLinks`, `accurateTrackBounce` включены. `noscript`-fallb
 | `limit_dialog_open` | открыт диалог исчерпанного лимита | монетизация |
 | `vacancy_feed_error` | hh.ru/сервер не загрузил вакансии | диагностика |
 | `cover_letter_error` | генерация письма завершилась ошибкой | диагностика |
+| `auth_start` | пользователь нажал кнопку входа через любой провайдер | авторизация |
+| `auth_success` | после OAuth реально появилась app/Supabase-сессия | авторизация, ключевая |
+| `auth_error` | OAuth вернул ошибку или после success не появилась сессия | авторизация |
+| `auth_sign_out` | пользователь вышел из аккаунта | авторизация |
+| `auth_google_start` | старт входа через Google | авторизация/provider |
+| `auth_google_success` | успешный вход через Google | авторизация/provider |
+| `auth_google_error` | ошибка входа через Google | авторизация/provider |
+| `auth_yandex_start` | старт входа через Яндекс | авторизация/provider |
+| `auth_yandex_success` | успешный вход через Яндекс | авторизация/provider |
+| `auth_yandex_error` | ошибка входа через Яндекс | авторизация/provider |
+| `auth_hh_start` | старт входа через hh.ru | авторизация/provider |
+| `auth_hh_success` | успешный вход через hh.ru | авторизация/provider |
+| `auth_hh_error` | ошибка входа через hh.ru | авторизация/provider |
+
+Авторизационные события отправляются из клиентских компонентов, потому что
+Yandex Metrika доступна только в браузере:
+- старт входа — из `AuthButtons` и auth-dialog внутри `PaywallDialog`;
+- success/error — из `AuthButtons` после возврата на `/profile?auth=...`;
+- success считается только после повторного запроса `/api/auth/session`, когда
+  сессия реально появилась в сторе. Если OAuth вернул `success`, но session endpoint
+  отдал `null`, отправляется `auth_error` со `stage=session_missing`.
+
+Параметры авторизации:
+- `provider`: `google`, `yandex`, `hh`;
+- `source`: `profile` или `paywall_auth_dialog`;
+- `stage`: `callback`, `provider_redirect`, `session_missing`;
+- `has_email`: есть ли email в профиле после успешной авторизации;
+- `error_message`: короткая безопасная ошибка, без токенов, code, cookie и secret.
 
 ---
 

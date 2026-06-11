@@ -5,10 +5,21 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getAuthUser } from "@/lib/db-sync";
 import { useAppStore } from "@/lib/store/use-app-store";
+import {
+  type AuthAnalyticsProvider,
+  trackAuthError,
+  trackAuthSignOut,
+  trackAuthStart,
+  trackAuthSuccess,
+} from "@/lib/analytics";
 
 interface AuthIssue {
   title: string;
   detail?: string;
+}
+
+function safeAuthProvider(value: string | null): AuthAnalyticsProvider {
+  return value === "yandex" || value === "hh" ? value : "google";
 }
 
 function GoogleIcon() {
@@ -89,6 +100,7 @@ export function AuthButtons() {
       params.get("error_description") ?? params.get("error");
     const authError = params.get("auth_error") ?? directOauthError;
     const authStatus = auth ?? (directOauthError ? "error" : null);
+    const providerId = safeAuthProvider(provider);
     const providerName =
       provider === "yandex"
         ? "Яндекс"
@@ -102,6 +114,10 @@ export function AuthButtons() {
         setAuthUser(freshUser);
         setAuthChecked(true);
         if (!freshUser) {
+          trackAuthError(providerId, {
+            source: "profile",
+            stage: "session_missing",
+          });
           setAuthIssue({
             title: "Сессия аккаунта не появилась",
             detail:
@@ -111,14 +127,26 @@ export function AuthButtons() {
             "Вход прошёл, но сессия аккаунта не появилась. Попробуйте войти ещё раз.",
           );
         } else {
+          trackAuthSuccess(freshUser.provider ?? providerId, {
+            source: "profile",
+            has_email: Boolean(freshUser.email),
+          });
           setAuthIssue(null);
         }
       });
       window.history.replaceState(null, "", window.location.pathname);
     } else if (authStatus === "error") {
-      setAuthIssue({
-        title: `Не удалось войти через ${providerName}`,
-        detail: authError ?? undefined,
+      trackAuthError(providerId, {
+        source: "profile",
+        stage: directOauthError ? "provider_redirect" : "callback",
+        error_message: authError,
+      });
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setAuthIssue({
+          title: `Не удалось войти через ${providerName}`,
+          detail: authError ?? undefined,
+        });
       });
       toast.error(
         authError
@@ -133,22 +161,27 @@ export function AuthButtons() {
   }, [setAuthChecked, setAuthUser]);
 
   const signInWithGoogle = () => {
+    trackAuthStart("google", { source: "profile" });
     window.location.assign("/api/auth/google?next=/profile");
   };
 
   const signInWithYandex = () => {
+    trackAuthStart("yandex", { source: "profile" });
     window.location.assign("/api/auth/yandex?next=/profile");
   };
 
   const signInWithHh = () => {
+    trackAuthStart("hh", { source: "profile" });
     window.location.assign("/api/auth/hh?next=/profile");
   };
 
   const signOut = async () => {
+    const provider = user?.provider ?? "unknown";
     setSigningOut(true);
     try {
       await fetch("/api/auth/sign-out", { method: "POST" });
       setAuthUser(null);
+      trackAuthSignOut({ provider, source: "profile" });
       toast.success("Вы вышли из аккаунта");
       window.location.reload();
     } catch {

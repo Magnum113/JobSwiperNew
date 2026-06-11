@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { PLANS, PRO_BENEFITS, type Plan } from "@/lib/plans";
-import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
+import { ANALYTICS_GOALS, trackAuthStart, trackGoal } from "@/lib/analytics";
 
 function GoogleIcon() {
   return (
@@ -138,14 +138,17 @@ export function PaywallDialog() {
   };
 
   const signInWithGoogle = () => {
+    trackAuthStart("google", { source: "paywall_auth_dialog" });
     window.location.assign("/api/auth/google?next=/profile");
   };
 
   const signInWithYandex = () => {
+    trackAuthStart("yandex", { source: "paywall_auth_dialog" });
     window.location.assign("/api/auth/yandex?next=/profile");
   };
 
   const signInWithHh = () => {
+    trackAuthStart("hh", { source: "paywall_auth_dialog" });
     window.location.assign("/api/auth/hh?next=/profile");
   };
 
