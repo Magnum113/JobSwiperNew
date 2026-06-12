@@ -232,6 +232,19 @@ export async function upsertVacancies(
   if (error) throw new Error(error.message);
 }
 
+export async function loadVacancySnapshot(
+  vacancyId: string,
+): Promise<HHVacancyItem | null> {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("vacancies")
+    .select("data")
+    .eq("id", vacancyId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.data ? (data.data as HHVacancyItem) : null;
+}
+
 /* -------------------------------- swipes ---------------------------------- */
 
 export async function recordSwipe(
