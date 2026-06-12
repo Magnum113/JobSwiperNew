@@ -53,19 +53,70 @@ function pretty(value: unknown): string {
 
 function PreBlock({
   title,
+  description,
   value,
 }: {
   title: string;
+  description?: string;
   value: string;
 }) {
   return (
     <section className="rounded-xl border border-border/70 bg-card">
       <div className="border-b border-border/60 px-4 py-3">
         <h2 className="text-sm font-semibold">{title}</h2>
+        {description && (
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        )}
       </div>
       <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap break-words p-4 text-xs leading-relaxed text-foreground/90">
         {value}
       </pre>
+    </section>
+  );
+}
+
+function FieldGuide({ kind }: { kind: PromptKind }) {
+  const vacancyInputName =
+    kind === "cover" ? "Cover vacancy input" : "Match vacancy input";
+
+  return (
+    <section className="rounded-xl border border-border/70 bg-card p-4">
+      <h2 className="text-sm font-semibold">Что показывает страница</h2>
+      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="font-medium text-foreground">Chat messages</dt>
+          <dd className="mt-1 text-muted-foreground">
+            Итоговый массив `messages`, который передаётся в chat completions:
+            `system` задаёт правила, `user` содержит резюме, вакансию и формат
+            ожидаемого ответа.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Request options</dt>
+          <dd className="mt-1 text-muted-foreground">
+            Параметры вызова модели: модель, температура и лимит токенов. Это
+            не текст промпта, а настройки генерации.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">{vacancyInputName}</dt>
+          <dd className="mt-1 text-muted-foreground">
+            Подготовленные данные вакансии до сборки промпта. В `match` это
+            короткий объект с `id`, `name`, `company`, `experience`, `info`; в
+            `cover` это название, компания и превью описания.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Resume context</dt>
+          <dd className="mt-1 text-muted-foreground">
+            Текстовый блок резюме из текущего профиля: профессия, уровень,
+            навыки, summary и полный текст резюме. Именно этот блок вставляется
+            в AI prompt.
+          </dd>
+        </div>
+      </dl>
     </section>
   );
 }
@@ -309,12 +360,35 @@ export default async function AiPromptDebugPage({ searchParams }: PageProps) {
         </div>
       </Notice>
 
+      <FieldGuide kind={kind} />
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <PreBlock title="Chat messages" value={pretty(messages)} />
+        <PreBlock
+          title="Chat messages"
+          description={
+            kind === "cover"
+              ? "Полный prompt для сопроводительного письма. Внутри user.content находится блок вакансии и resumeContext; описание вакансии обрезается логикой buildCoverLetterMessages."
+              : "Полный prompt для оценки совместимости. Внутри user.content находится resumeContext и JSON-массив вакансий; в реальном batch их может быть до 10."
+          }
+          value={pretty(messages)}
+        />
         <div className="flex flex-col gap-4">
-          <PreBlock title="Request options" value={pretty(requestOptions)} />
+          <PreBlock
+            title="Request options"
+            description={
+              kind === "cover"
+                ? "Настройки, с которыми /api/cover-letter вызывает модель: более высокая температура для живого текста письма."
+                : "Настройки, с которыми /api/match вызывает модель: низкая температура для более стабильной числовой оценки."
+            }
+            value={pretty(requestOptions)}
+          />
           <PreBlock
             title={kind === "cover" ? "Cover vacancy input" : "Match vacancy input"}
+            description={
+              kind === "cover"
+                ? "Сводка входных данных вакансии для письма. Полное описание смотри в Chat messages, здесь показаны длина и превью."
+                : "`info` — главный текст вакансии для match: обычно очищенный hh.ru snippet из requirement/responsibility; если снапшота нет, fallback берётся из описания."
+            }
             value={
               kind === "cover"
                 ? pretty({
@@ -329,7 +403,11 @@ export default async function AiPromptDebugPage({ searchParams }: PageProps) {
                 : pretty(matchInput)
             }
           />
-          <PreBlock title="Resume context" value={resumeContext} />
+          <PreBlock
+            title="Resume context"
+            description="Итоговый текст резюме, который собирает buildResumeContext(). Если важный опыт не попал сюда или находится далеко в полном тексте, модель может его не учесть после обрезки промпта."
+            value={resumeContext}
+          />
         </div>
       </div>
     </main>

@@ -777,6 +777,10 @@ prompt payload без вызова ИИ:
   (`buildResumeContext()`), поэтому URL нельзя делать публичной диагностикой без
   авторизации: там виден текст резюме. `robots.ts` дополнительно закрывает
   `/debug`.
+- На странице есть короткий field guide: что означает `Chat messages`,
+  `Request options`, `Match/Cover vacancy input` и `Resume context`. Это важно,
+  потому что `Chat messages` — фактический payload для ИИ, а vacancy/resume
+  блоки ниже — расшифровка подготовленных входных данных.
 
 ---
 
