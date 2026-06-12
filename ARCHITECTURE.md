@@ -395,9 +395,13 @@ app-session-аккаунт; данные грузятся как у всех (`p
 
 ### Модель
 ```
-mistral-nemo   ← Mistral через AITunnel (контекст ~131K)
+mistral-small-3.2-24b-instruct   ← Mistral через AITunnel (24B, контекст ~128K)
 ```
 Модель задаётся одним полем `model` (можно переопределить переменной `AI_MODEL`).
+Перешли с `mistral-nemo` (12B): Small 3.2 заметно лучше держит правила матчинга
+(«strengths только из резюме») и стабильнее отдаёт JSON в батче. Цена выше
+(11,52/34,56 ₽ за 1M токенов против 3,84/7,68 у nemo), маржа тарифов ~79–83% —
+расчёт в PRICING.md.
 
 Эндпоинт: `POST https://api.aitunnel.ru/v1/chat/completions` (OpenAI-совместимый),
 заголовки `Authorization: Bearer ${AITUNNEL_API_KEY}`, `Content-Type`.

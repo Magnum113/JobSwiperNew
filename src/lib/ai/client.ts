@@ -6,7 +6,10 @@ import "server-only";
 const AI_URL = "https://api.aitunnel.ru/v1/chat/completions";
 
 // Mistral model served by AITunnel (~128k context). Override with AI_MODEL.
-export const DEFAULT_MODEL = process.env.AI_MODEL ?? "mistral-nemo";
+// Small 3.2 (24B) вместо nemo (12B): заметно лучше следует правилам матчинга
+// («только факты из резюме») при марже тарифов ~79–83% (см. PRICING.md).
+export const DEFAULT_MODEL =
+  process.env.AI_MODEL ?? "mistral-small-3.2-24b-instruct";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
