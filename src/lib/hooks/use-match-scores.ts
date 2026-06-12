@@ -7,7 +7,11 @@ import { getFreeLimits } from "@/lib/plans";
 import type { HHVacancyItem } from "@/lib/hh/types";
 import type { MatchResult } from "@/lib/types";
 
-const BATCH_SIZE = 10; // max vacancies per /api/match request
+// Kept small on purpose: /api/match enriches every vacancy with its full
+// description, and a small model compares each against the resume noticeably
+// better when the batch is short (less cross-contamination between vacancies).
+// The API itself still caps a batch at 10.
+const BATCH_SIZE = 5;
 const WINDOW = 18; // how many upcoming cards to keep pre-scored
 const MAX_CONCURRENT = 3; // parallel scoring requests in flight
 

@@ -16,7 +16,7 @@ import {
   loadVacancySnapshot,
 } from "@/lib/supabase/queries";
 import type { ChatMessage } from "@/lib/ai/client";
-import type { HHVacancyItem } from "@/lib/hh/types";
+import type { HHVacancyDetail, HHVacancyItem } from "@/lib/hh/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,8 +104,10 @@ function FieldGuide({ kind }: { kind: PromptKind }) {
           <dt className="font-medium text-foreground">{vacancyInputName}</dt>
           <dd className="mt-1 text-muted-foreground">
             Подготовленные данные вакансии до сборки промпта. В `match` это
-            короткий объект с `id`, `name`, `company`, `experience`, `info`; в
-            `cover` это название, компания и превью описания.
+            объект с `id`, `name`, `company`, `experience`, `keySkills` и
+            `info` — полным описанием вакансии (очищенным от HTML, с fallback
+            на короткий snippet); в `cover` это название, компания и превью
+            описания.
           </dd>
         </div>
         <div>
@@ -152,7 +154,7 @@ async function loadVacancyForDebug(vacancyId: string): Promise<{
       vacancy: snapshot,
       source: "snapshot",
       sourceNote:
-        "Match prompt собран из сохранённого снапшота search-вакансии. Это тот же тип данных, который уходит в /api/match после оценки карточки.",
+        "Базовые поля вакансии взяты из сохранённого снапшота search-вакансии. Описание и key_skills, как и в реальном /api/match, дотягиваются из детальной вакансии hh.ru.",
     };
   }
 
@@ -162,7 +164,7 @@ async function loadVacancyForDebug(vacancyId: string): Promise<{
       vacancy: detail,
       source: "hh-detail",
       sourceNote:
-        "Снапшота search-вакансии в БД нет, поэтому match prompt собран fallback-ом из детальной вакансии hh.ru. Он может отличаться от реального /api/match, где используется короткий snippet из поиска.",
+        "Снапшота search-вакансии в БД нет (карточка не оценивалась/не лайкалась), поэтому все поля взяты из детальной вакансии hh.ru. Реальный /api/match работает так же: обогащает вакансию полным описанием и key_skills.",
     };
   } catch {
     return {
@@ -173,16 +175,26 @@ async function loadVacancyForDebug(vacancyId: string): Promise<{
   }
 }
 
-function matchInputFromVacancy(vacancy: HHVacancyItem): MatchVacancyInput {
+/**
+ * Mirrors the enrichment in /api/match: full detail description + key_skills
+ * when hh.ru has them, with the search snippet as fallback.
+ */
+function matchInputFromVacancy(
+  vacancy: HHVacancyItem,
+  detail: HHVacancyDetail | null,
+): MatchVacancyInput {
   const searchSnippet = cleanSnippet(vacancy.snippet);
-  const fallbackDescription = stripHtml(vacancyDescription(vacancy));
+  const description = stripHtml(
+    detail?.description ?? vacancyDescription(vacancy),
+  );
 
   return {
     id: vacancy.id,
     name: vacancy.name,
     company: vacancy.employer?.name ?? "",
-    info: searchSnippet || fallbackDescription,
+    info: description || searchSnippet,
     experience: vacancy.experience?.name ?? "",
+    keySkills: detail?.key_skills?.map((s) => s.name) ?? [],
   };
 }
 
@@ -311,14 +323,15 @@ export default async function AiPromptDebugPage({ searchParams }: PageProps) {
     );
   }
 
-  const matchInput = matchInputFromVacancy(vacancy);
+  // Both prompts now consume the full hh.ru detail (match enriches with it on
+  // the server), so fetch it once for the page.
+  const detail: HHVacancyDetail | null =
+    source === "hh-detail"
+      ? (vacancy as HHVacancyDetail)
+      : await getVacancy(vacancyId).catch(() => null);
+  const matchInput = matchInputFromVacancy(vacancy, detail);
   const matchMessages = buildMatchMessages(resumeContext, [matchInput]);
-  const detailForCover =
-    kind === "cover"
-      ? await getVacancy(vacancyId).catch(() => null)
-      : source === "hh-detail"
-        ? vacancy
-        : null;
+  const detailForCover = detail;
   const coverDescription = detailForCover
     ? vacancyDescription(detailForCover)
     : "";
@@ -330,8 +343,8 @@ export default async function AiPromptDebugPage({ searchParams }: PageProps) {
   const messages = kind === "cover" ? coverMessages : matchMessages;
   const requestOptions =
     kind === "cover"
-      ? { model: "AI_MODEL || mistral-nemo", temperature: 0.7, max_tokens: 700 }
-      : { model: "AI_MODEL || mistral-nemo", temperature: 0.1, max_tokens: 1200 };
+      ? { model: "AI_MODEL || mistral-nemo", temperature: 0.7, max_tokens: 900 }
+      : { model: "AI_MODEL || mistral-nemo", temperature: 0.1, max_tokens: 2500 };
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-4 py-6">
@@ -368,7 +381,7 @@ export default async function AiPromptDebugPage({ searchParams }: PageProps) {
           description={
             kind === "cover"
               ? "Полный prompt для сопроводительного письма. Внутри user.content находится блок вакансии и resumeContext; описание вакансии обрезается логикой buildCoverLetterMessages."
-              : "Полный prompt для оценки совместимости. Внутри user.content находится resumeContext и JSON-массив вакансий; в реальном batch их может быть до 10."
+              : "Полный prompt для оценки совместимости. Внутри user.content находится resumeContext и JSON-массив вакансий; в реальном batch их до 5."
           }
           value={pretty(messages)}
         />
@@ -387,7 +400,7 @@ export default async function AiPromptDebugPage({ searchParams }: PageProps) {
             description={
               kind === "cover"
                 ? "Сводка входных данных вакансии для письма. Полное описание смотри в Chat messages, здесь показаны длина и превью."
-                : "`info` — главный текст вакансии для match: обычно очищенный hh.ru snippet из requirement/responsibility; если снапшота нет, fallback берётся из описания."
+                : "`info` — главный текст вакансии для match: полное описание из детальной hh.ru вакансии (очищенное от HTML); если деталь недоступна, fallback — очищенный snippet из requirement/responsibility."
             }
             value={
               kind === "cover"

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { chatCompletion, extractJson, AIError } from "@/lib/ai/client";
 import { buildMatchMessages, type MatchVacancyInput } from "@/lib/ai/prompts";
+import { getVacancy } from "@/lib/hh/client";
+import { stripHtml } from "@/lib/hh/format";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -40,11 +42,31 @@ export async function POST(req: Request) {
   // Keep batches small for reliable JSON + token budget.
   const batch = vacancies.slice(0, 10);
 
+  // Enrich each vacancy with the full hh.ru description + key skills, so the
+  // model judges against the real requirements instead of the short search
+  // snippet. Detail fetches are free and server-cached (revalidate 3600);
+  // on failure the snippet passed by the client stays as fallback.
+  const enriched = await Promise.all(
+    batch.map(async (v): Promise<MatchVacancyInput> => {
+      try {
+        const detail = await getVacancy(v.id);
+        const description = stripHtml(detail.description);
+        return {
+          ...v,
+          info: description || v.info,
+          keySkills: detail.key_skills?.map((s) => s.name) ?? [],
+        };
+      } catch {
+        return v;
+      }
+    }),
+  );
+
   try {
     const raw = await chatCompletion({
-      messages: buildMatchMessages(resumeContext, batch),
+      messages: buildMatchMessages(resumeContext, enriched),
       temperature: 0.1,
-      maxTokens: 1200,
+      maxTokens: 2500,
     });
 
     const parsed = extractJson<RawMatch[]>(raw);

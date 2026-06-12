@@ -42,8 +42,9 @@ export interface MatchVacancyInput {
   id: string;
   name: string;
   company: string;
-  info: string; // snippet or short description
+  info: string; // full plain-text description, or the search snippet as fallback
   experience?: string;
+  keySkills?: string[];
 }
 
 export function buildMatchMessages(
@@ -55,7 +56,8 @@ export function buildMatchMessages(
     name: v.name,
     company: v.company,
     experience: v.experience ?? "",
-    info: truncate(v.info, 600),
+    key_skills: v.keySkills?.length ? v.keySkills.slice(0, 20) : undefined,
+    info: truncate(v.info, 2000),
   }));
 
   return [
@@ -69,11 +71,18 @@ export function buildMatchMessages(
     {
       role: "user",
       content:
-        `РЕЗЮМЕ КАНДИДАТА:\n"""${truncate(resumeContext, 4000)}"""\n\n` +
+        `РЕЗЮМЕ КАНДИДАТА:\n"""${truncate(resumeContext, 10000)}"""\n\n` +
         `ВАКАНСИИ (JSON):\n${JSON.stringify(list)}\n\n` +
-        "Для КАЖДОЙ вакансии оцени соответствие резюме числом от 0 до 100. " +
+        "Для КАЖДОЙ вакансии оцени соответствие резюме числом от 0 до 100.\n\n" +
+        "Жёсткие правила для strengths и gaps:\n" +
+        "1) strengths — ТОЛЬКО факты, явно написанные в резюме кандидата и релевантные именно этой вакансии. " +
+        "НЕЛЬЗЯ приписывать кандидату опыт, навыки или сферы, которых нет в тексте резюме, даже если они требуются в вакансии.\n" +
+        "2) gaps — ТОЛЬКО требования, явно названные в полях этой вакансии (name, experience, key_skills, info) и при этом отсутствующие в резюме. " +
+        "Прежде чем записать что-то в gaps, проверь, что этого реально нет в резюме.\n" +
+        "3) Не смешивай вакансии между собой: strengths и gaps каждой вакансии строй только по её собственным полям.\n" +
+        "4) Если данных о вакансии слишком мало для выводов — верни пустые массивы strengths и gaps, а не догадки.\n\n" +
         "Верни массив строго в таком формате, сохраняя те же id:\n" +
-        `[{"id":"<id>","score":<целое 0-100>,"strengths":[<1-3 сильные стороны кандидата под эту вакансию, кратко>],` +
+        `[{"id":"<id>","score":<целое 0-100>,"strengths":[<0-3 сильные стороны кандидата под эту вакансию, кратко>],` +
         `"gaps":[<0-3 чего не хватает, кратко>],"summary":"<одно предложение-вывод по-русски>"}]\n` +
         "Только JSON-массив, никакого другого текста.",
     },
