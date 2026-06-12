@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SlidersHorizontal, RotateCcw } from "lucide-react";
 import {
   Sheet,
@@ -89,10 +89,11 @@ export function FiltersSheet() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Filters>(filters);
 
-  // Sync draft whenever the sheet opens.
-  useEffect(() => {
-    if (open) setDraft(filters);
-  }, [open, filters]);
+  // Sync draft from the applied filters at the moment the sheet opens.
+  const handleOpenChange = (next: boolean) => {
+    if (next) setDraft(filters);
+    setOpen(next);
+  };
 
   const toggle = (key: "experience" | "employment" | "schedule") => (id: string) =>
     setDraft((d) => ({
@@ -113,7 +114,7 @@ export function FiltersSheet() {
   const activeCount = countActive(filters);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger
         render={
           <Button
