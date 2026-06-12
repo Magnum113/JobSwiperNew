@@ -24,41 +24,47 @@ export const metadata: Metadata = {
 
 export default function ProfilePage() {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-4xl">
       <PaymentStatusBridge />
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl lg:hidden">
         <BrandMark />
       </header>
 
-      <div className="space-y-4 px-4 py-4">
-        <div className="pt-1">
+      <div className="px-4 py-4">
+        <div className="pb-4 pt-1">
           <h1 className="text-2xl font-bold tracking-tight">Личный кабинет</h1>
         </div>
 
-        <UpgradeCard />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Аккаунт</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AuthButtons />
-          </CardContent>
-        </Card>
-
-        <ResumeForm />
-
-        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <SunMoon className="size-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">Оформление</p>
-              <p className="text-xs text-muted-foreground">
-                Светлая или тёмная тема
-              </p>
-            </div>
+        <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
+          <div className="lg:col-start-1 lg:row-start-1">
+            <UpgradeCard />
           </div>
-          <ThemeToggle />
+
+          <Card className="lg:col-start-1 lg:row-start-2">
+            <CardHeader>
+              <CardTitle>Аккаунт</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AuthButtons />
+            </CardContent>
+          </Card>
+
+          <div className="lg:col-start-2 lg:row-start-1 lg:row-span-3">
+            <ResumeForm />
+          </div>
+
+          <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3 lg:col-start-1 lg:row-start-3">
+            <div className="flex items-center gap-2.5">
+              <SunMoon className="size-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Оформление</p>
+                <p className="text-xs text-muted-foreground">
+                  Светлая или тёмная тема
+                </p>
+              </div>
+            </div>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </div>

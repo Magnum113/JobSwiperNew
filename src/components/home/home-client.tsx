@@ -14,6 +14,7 @@ import { ProButton } from "@/components/paywall/pro-button";
 import { FiltersSheet } from "@/components/filters/filters-sheet";
 import { SwipeDeck } from "@/components/swipe/swipe-deck";
 import { DeckRefillBanner } from "@/components/swipe/deck-refill-banner";
+import { VacancyInsights } from "@/components/swipe/vacancy-insights";
 import { VacancyDetailDialog } from "@/components/vacancy/vacancy-detail-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,38 @@ function DeckSkeleton() {
   );
 }
 
+const MATCH_TIERS = [
+  { color: "#10b981", label: "Отличное", range: "85+" },
+  { color: "#22c55e", label: "Хорошее", range: "70+" },
+  { color: "#f59e0b", label: "Среднее", range: "50+" },
+  { color: "#fb923c", label: "Слабое", range: "30+" },
+  { color: "#f43f5e", label: "Низкое", range: "" },
+] as const;
+
+/** Desktop-only legend explaining the match-ring colors below the deck. */
+function MatchLegend() {
+  return (
+    <div className="mt-7 hidden flex-wrap items-center justify-center gap-x-4 gap-y-2 lg:flex">
+      <span className="text-xs font-medium text-muted-foreground">
+        Совпадение:
+      </span>
+      {MATCH_TIERS.map((tier) => (
+        <span
+          key={tier.label}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: tier.color }}
+          />
+          {tier.label}
+          {tier.range && ` · ${tier.range}`}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function HomeClient() {
   const hydrated = useAppStore((s) => s.hydrated);
   const authUser = useAppStore((s) => s.authUser);
@@ -63,6 +96,38 @@ export default function HomeClient() {
   const { remaining } = useLimits();
   const feedLoadedKeyRef = useRef<string | null>(null);
   const feedErrorKeyRef = useRef<string | null>(null);
+
+  // Dev-only: open `/?preview=feed` (or `?preview=1`) on localhost to view the
+  // vacancy feed without signing in — injects a sample session + profile so the
+  // gate below passes and real hh.ru vacancies load. Guarded to development and
+  // writes nothing to the server (raw setState, not the persisted actions); it
+  // never runs in a production build.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    if (typeof window === "undefined") return;
+    const preview = new URLSearchParams(window.location.search).get("preview");
+    if (preview !== "feed" && preview !== "1") return;
+    if (!hydrated || !authChecked) return;
+    if (authUser && profile) return;
+    useAppStore.setState((s) => ({
+      authUser: s.authUser ?? {
+        id: "preview",
+        email: "preview@local",
+        name: "Preview",
+        avatarUrl: null,
+      },
+      profile: s.profile ?? {
+        rawText: "Демо-резюме для предпросмотра ленты.",
+        title: "Frontend-разработчик",
+        skills: ["React", "TypeScript", "Next.js"],
+        seniority: "Middle",
+        summary: "Демо-профиль для предпросмотра ленты на localhost.",
+        experienceId: "between3And6",
+        updatedAt: Date.now(),
+      },
+      filters: { ...s.filters, text: s.filters.text || "Frontend-разработчик" },
+    }));
+  }, [hydrated, authChecked, authUser, profile]);
 
   const enabled = hydrated && authChecked && !!authUser && !!profile;
 
@@ -366,40 +431,74 @@ export default function HomeClient() {
     );
   }
 
+  // The current top card (drives the desktop insights panel). `sortedItems[0]`
+  // is exactly what SwipeDeck renders on top, so the panel stays in sync.
+  const topCard = sortedItems[0];
+  const topMatch = topCard ? matches[topCard.id] : undefined;
+  const topScoring = topCard ? loadingIds.has(topCard.id) : false;
+  const showDeck = !!profile && !isLoading && !isError && deckItems.length > 0;
+
+  const statusNode =
+    enabled && !isLoading && !isError && deckItems.length > 0 && found > 0 ? (
+      <>
+        Найдено{" "}
+        <span className="font-semibold text-foreground">
+          {found.toLocaleString("ru-RU")}
+        </span>{" "}
+        вакансий{filters.text ? ` по запросу «${filters.text}»` : ""}
+        {isFetchingNextPage && " · подгружаем ещё…"}
+        {loadingIds.size > 0 && " · оцениваем совместимость…"}
+      </>
+    ) : null;
+
   return (
     <div className="flex flex-1 flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl">
-        <BrandMark />
-        <div className="flex items-center gap-2">
-          <ProButton source="feed-header" />
-          <FiltersSheet />
+      {/* Sticky toolbar — a full-width bar (bg + border reach the column edges);
+          its inner content is centered to align with the workspace below. */}
+      <header className="sticky top-0 z-30 border-b border-border/40 bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3 xl:max-w-6xl 2xl:max-w-7xl">
+          <BrandMark className="lg:hidden" />
+          {statusNode && (
+            <p className="hidden min-w-0 flex-1 truncate text-sm text-muted-foreground lg:block">
+              {statusNode}
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <ProButton source="feed-header" />
+            <FiltersSheet />
+          </div>
         </div>
       </header>
 
-      {/* Subtle status line */}
-      {enabled && !isLoading && !isError && deckItems.length > 0 && (
-        <div className="px-4 pt-2 text-center sm:pt-3">
-          <p className="text-xs text-muted-foreground">
-            {found > 0 && (
-              <>
-                Найдено{" "}
-                <span className="font-semibold text-foreground">
-                  {found.toLocaleString("ru-RU")}
-                </span>{" "}
-                вакансий
-                {filters.text ? ` по запросу «${filters.text}»` : ""}
-                {isFetchingNextPage && " · подгружаем ещё…"}
-                {loadingIds.size > 0 && " · оцениваем совместимость…"}
-              </>
-            )}
-          </p>
+      {/* Mobile/tablet status line (desktop shows it in the toolbar instead) */}
+      {statusNode && (
+        <div className="px-4 pt-2 text-center sm:pt-3 lg:hidden">
+          <p className="text-xs text-muted-foreground">{statusNode}</p>
         </div>
       )}
 
-      {/* Deck / states */}
-      <div className="flex flex-1 items-start justify-center px-4 pb-3 pt-3 sm:py-4">
-        <div className="w-full max-w-sm">{body}</div>
+      {/* Deck / states — centered workspace */}
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-3 pt-3 sm:py-4 xl:max-w-6xl 2xl:max-w-7xl">
+        {showDeck ? (
+          <div className="flex flex-1 flex-col items-center justify-start lg:justify-center xl:grid xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)] xl:items-start xl:justify-normal xl:gap-6">
+            <div className="flex w-full flex-col items-center">
+              <div className="w-full max-w-sm lg:max-w-md">{body}</div>
+              <MatchLegend />
+            </div>
+            {topCard && (
+              <VacancyInsights
+                vacancy={topCard}
+                match={topMatch}
+                loading={topScoring}
+                onDetails={() => openDetails(topCard)}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-start lg:justify-center">
+            <div className="w-full max-w-sm lg:max-w-md">{body}</div>
+          </div>
+        )}
       </div>
 
       <VacancyDetailDialog

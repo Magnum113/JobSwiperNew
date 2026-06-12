@@ -46,7 +46,7 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden">
       <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border/60 bg-background/85 p-1.5 shadow-card backdrop-blur-xl">
         {TABS.map((tab) => {
           const active =

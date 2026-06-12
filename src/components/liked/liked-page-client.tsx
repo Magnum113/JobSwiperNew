@@ -40,8 +40,8 @@ export default function LikedPageClient() {
   const [detailOpen, setDetailOpen] = useState(false);
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl">
+    <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-5xl">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/70 px-4 py-3 backdrop-blur-xl lg:hidden">
         <BrandMark />
         <ProButton source="liked-header" />
       </header>
@@ -54,7 +54,7 @@ export default function LikedPageClient() {
         {hydrated && <CustomVacancySheet />}
 
         {!hydrated ? (
-          <div className="space-y-4">
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
             <Skeleton className="h-48 w-full rounded-2xl" />
             <Skeleton className="h-48 w-full rounded-2xl" />
           </div>
@@ -75,7 +75,7 @@ export default function LikedPageClient() {
             }
           />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
             {feed.map((entry) =>
               entry.kind === "liked" ? (
                 <LikedCard

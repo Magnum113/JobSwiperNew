@@ -3,6 +3,7 @@ import { chatCompletion, AIError } from "@/lib/ai/client";
 import { buildCoverLetterMessages } from "@/lib/ai/prompts";
 import { getVacancy } from "@/lib/hh/client";
 import { stripHtml } from "@/lib/hh/format";
+import { getAuthenticatedUserId } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -15,6 +16,14 @@ interface VacancyInput {
 }
 
 export async function POST(req: Request) {
+  // Letter generation is an authenticated, paid action. Reject anonymous calls
+  // so the endpoint can't be hit directly to burn the AI budget. Legitimate
+  // app requests carry the session cookie, so this is resolved server-side.
+  const userId = await getAuthenticatedUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
+  }
+
   let resumeContext = "";
   let vacancy: VacancyInput = {};
   try {

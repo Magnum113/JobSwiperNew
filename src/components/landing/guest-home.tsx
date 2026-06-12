@@ -55,9 +55,9 @@ function ProductPreview() {
   return (
     <section
       aria-label="Превью продукта"
-      className="border-y border-border/60 bg-white/72 px-4 py-5 shadow-[0_24px_70px_oklch(0.58_0.2_290_/_0.09)] backdrop-blur sm:px-6"
+      className="border-y border-border/60 bg-white/72 px-4 py-5 shadow-[0_24px_70px_oklch(0.58_0.2_290_/_0.09)] backdrop-blur sm:px-6 lg:rounded-3xl lg:border lg:px-6 lg:py-6"
     >
-      <div className="grid gap-3 sm:grid-cols-[1.05fr_0.95fr] sm:items-stretch">
+      <div className="grid gap-3 sm:grid-cols-[1.05fr_0.95fr] sm:items-stretch lg:grid-cols-1">
         <article className="rounded-2xl border border-border/70 bg-background p-4 shadow-sm">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -132,20 +132,43 @@ function SectionIntro({
 export function GuestHome() {
   return (
     <div className="flex flex-1 flex-col bg-[linear-gradient(180deg,#ffffff_0%,#faf7ff_48%,#f3fffb_100%)]">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/45 bg-background/80 px-4 py-3 backdrop-blur-xl sm:px-6">
-        <BrandMark />
-        <Button
-          variant="outline"
-          className="h-9 rounded-full px-4"
-          nativeButton={false}
-          render={<Link href="/profile" />}
-        >
-          Войти
-        </Button>
+      <header className="sticky top-0 z-30 border-b border-border/45 bg-background/80 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
+          <BrandMark />
+          <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground lg:flex">
+            <a href="#how-it-works" className="transition-colors hover:text-foreground">
+              Как это работает
+            </a>
+            <a href="#audience" className="transition-colors hover:text-foreground">
+              Кому подходит
+            </a>
+            <a href="#faq" className="transition-colors hover:text-foreground">
+              Вопросы
+            </a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-9 rounded-full px-4"
+              nativeButton={false}
+              render={<Link href="/profile" />}
+            >
+              Войти
+            </Button>
+            <Button
+              className="hidden h-9 rounded-full bg-gradient-brand px-5 lg:inline-flex"
+              nativeButton={false}
+              render={<Link href="/profile" />}
+            >
+              Начать бесплатно
+            </Button>
+          </div>
+        </div>
       </header>
 
-      <section className="px-4 pb-5 pt-7 sm:px-6 sm:pb-7 sm:pt-9">
-        <div className="mx-auto flex max-w-xl flex-col gap-5">
+      <div className="contents lg:mx-auto lg:grid lg:w-full lg:max-w-6xl lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-6 lg:pb-6 lg:pt-10">
+        <section className="px-4 pb-5 pt-7 sm:px-6 sm:pb-7 sm:pt-9 lg:p-0">
+          <div className="mx-auto flex max-w-xl flex-col gap-5 lg:mx-0">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-violet-700">
             <Sparkles className="size-3.5" />
             ИИ-подбор вакансий
@@ -189,10 +212,12 @@ export function GuestHome() {
             ))}
           </div>
         </div>
-      </section>
+        </section>
 
-      <ProductPreview />
+        <ProductPreview />
+      </div>
 
+      <div className="mx-auto w-full max-w-6xl">
       <section id="how-it-works" className="px-4 py-7 sm:px-6">
         <div className="grid gap-3 sm:grid-cols-3">
           {benefits.map(({ icon: Icon, title, text }) => (
@@ -240,7 +265,7 @@ export function GuestHome() {
         </div>
       </section>
 
-      <section className="px-4 pb-8 sm:px-6">
+      <section id="audience" className="px-4 pb-8 sm:px-6">
         <SectionIntro
           title="Кому помогает JobSwiper"
           text="Сервис подходит тем, кто хочет искать работу не по бесконечному списку вакансий, а по совпадению с реальным опытом и целями."
@@ -303,7 +328,7 @@ export function GuestHome() {
         </div>
       </section>
 
-      <section className="px-4 pb-10 sm:px-6">
+      <section id="faq" className="px-4 pb-10 sm:px-6">
         <SectionIntro
           title="Вопросы перед стартом"
           text="Коротко о подборе вакансий по резюме, оценке совпадения, письмах и лимитах."
@@ -325,6 +350,7 @@ export function GuestHome() {
           ))}
         </div>
       </section>
+      </div>
     </div>
   );
 }
